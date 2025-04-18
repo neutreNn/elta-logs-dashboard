@@ -19,7 +19,7 @@ export const getAllLogsErrors = async (req, res) => {
       device_firmware_version_max, 
       application_start_time_from, 
       application_start_time_to,
-      sort = '-createdAt', 
+      sort = '-start_time', 
       page = 1, 
       limit = 10,
     } = req.query;

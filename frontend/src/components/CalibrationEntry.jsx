@@ -182,11 +182,7 @@ const CalibrationEntry = ({ calibration, index }) => {
             </AccordionDetails>
           </Accordion>
         </Grid>
-      </Grid>
-
-      {/* Добавление reference_voltage_steps */}
-      <Grid container spacing={2} sx={{ marginBottom: 2 }}>
-        <Grid item xs={12}>
+        <Grid item xs={6} sm={6}>
           <Accordion defaultExpanded={false}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Typography variant="h6">Калибровочные шаги</Typography>

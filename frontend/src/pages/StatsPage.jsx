@@ -315,7 +315,7 @@ function StatsPage() {
             value={totalStats.totalLogs}
             icon={<SpeedIcon sx={{ color: chartColors.primary }} />}
             color={chartColors.primary}
-            subtitle="Общее количество записей"
+            subtitle="Общее количество логов"
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -324,6 +324,7 @@ function StatsPage() {
             value={totalStats.totalErrors}
             icon={<ErrorOutlineIcon sx={{ color: chartColors.error }} />}
             color={chartColors.error}
+            subtitle="Общее количество ошибок"
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -433,7 +434,7 @@ function StatsPage() {
         </Grid>
       </Grid>
 
-      <SectionTitle title="Тренды и динамика" />
+      <SectionTitle title="Распределение ошибок" />
       
       {/* Тренд ошибок */}
       <Grid container spacing={3}>
