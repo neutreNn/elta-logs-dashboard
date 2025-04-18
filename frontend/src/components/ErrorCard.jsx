@@ -8,6 +8,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import LinkIcon from '@mui/icons-material/Link';
 import { useNavigate } from 'react-router-dom';
+import formatDate from '../utils/formatDate';
 
 const ErrorCard = ({ error, isLast }) => {
   const [openDialog, setOpenDialog] = useState(false);
@@ -39,7 +40,7 @@ const ErrorCard = ({ error, isLast }) => {
           },
         }}
       >
-        <Typography><strong>Время ошибки:</strong> {error.start_time ?? 'Нет данных'}</Typography>
+        <Typography><strong>Время ошибки:</strong> {formatDate(error.start_time) ?? 'Нет данных'}</Typography>
 
         <Stack direction="row" spacing={1}>
             {error.parent_log_id && (

@@ -5,7 +5,7 @@ const ErrorLogSchema = new mongoose.Schema({
     viewed: { type: Boolean, default: false },
   
     // calibration data
-    start_time: String,
+    start_time: Date,
     calibration_source: String,
   
     // Добавленные из operator_settings

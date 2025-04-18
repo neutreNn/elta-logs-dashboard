@@ -54,25 +54,17 @@ export const getAllOperatorSettings = async (req, res) => {
     if (application_start_time_from || application_start_time_to) {
       filter["application_start_time"] = {};
       
-      // Преобразуем формат ГГГГ-ММ-ДД в ДД.ММ.ГГГГ
       if (application_start_time_from) {
-        // Формат из формы: "2025-02-10"
-        // Преобразуем в "10.02.2025 00:00:00"
-        const parts = application_start_time_from.split('-');
-        if (parts.length === 3) {
-          const formattedDateFrom = `${parts[2]}.${parts[1]}.${parts[0]} 00:00:00`;
-          filter["application_start_time"].$gte = formattedDateFrom;
-        }
+        filter["application_start_time"] = filter["application_start_time"] || {};
+        filter["application_start_time"].$gte = new Date(application_start_time_from);
       }
       
       if (application_start_time_to) {
-        // Формат из формы: "2025-02-15"
-        // Преобразуем в "15.02.2025 23:59:59"
-        const parts = application_start_time_to.split('-');
-        if (parts.length === 3) {
-          const formattedDateTo = `${parts[2]}.${parts[1]}.${parts[0]} 23:59:59`;
-          filter["application_start_time"].$lte = formattedDateTo;
-        }
+        filter["application_start_time"] = filter["application_start_time"] || {};
+        // Устанавливаем время конца дня для даты "до"
+        const dateTo = new Date(application_start_time_to);
+        dateTo.setHours(23, 59, 59, 999);
+        filter["application_start_time"].$lte = dateTo;
       }
     }
 
@@ -187,6 +179,22 @@ export const createLogEntry = async (req, res) => {
     
     // 1. Создаем OperatorSettings
     const operatorSettingsData = req.body.operator_settings || {};
+
+    // Преобразование строковой даты в объект Date
+    if (operatorSettingsData.application_start_time) {
+      const [datePart, timePart] = operatorSettingsData.application_start_time.split(' ');
+      const [day, month, year] = datePart.split('.');
+      const [hours, minutes, seconds] = timePart ? timePart.split(':') : [0, 0, 0];
+      
+      operatorSettingsData.application_start_time = new Date(
+        parseInt(year), 
+        parseInt(month) - 1, // месяцы в JavaScript начинаются с 0
+        parseInt(day),
+        parseInt(hours),
+        parseInt(minutes),
+        parseInt(seconds)
+      );
+    }
     
     // Парсим прошивку
     if (operatorSettingsData.device_firmware_version) {
@@ -228,10 +236,27 @@ export const createLogEntry = async (req, res) => {
     
     // Создаем записи calibration_entries
     if (Array.isArray(entries) && entries.length > 0) {
-      const entriesWithSettingsId = entries.map(entry => ({
-        ...entry,
-        operator_settings_id: savedOperatorSettings._id
-      }));
+      const entriesWithSettingsId = entries.map(entry => {
+        let processedEntry = { ...entry, operator_settings_id: savedOperatorSettings._id };
+        
+        // Преобразуем start_time в объект Date
+        if (entry.start_time) {
+          const [datePart, timePart] = entry.start_time.split(' ');
+          const [day, month, year] = datePart.split('.');
+          const [hours, minutes, seconds] = timePart ? timePart.split(':') : [0, 0, 0];
+          
+          processedEntry.start_time = new Date(
+            parseInt(year), 
+            parseInt(month) - 1,
+            parseInt(day),
+            parseInt(hours),
+            parseInt(minutes),
+            parseInt(seconds)
+          );
+        }
+        
+        return processedEntry;
+      });
       
       // Проверяем наличие ошибок
       const hasErrors = entries.some(entry => entry.error_detected === true);
@@ -246,20 +271,40 @@ export const createLogEntry = async (req, res) => {
         const entriesWithError = entries.filter(entry => entry.error_detected === true);
         
         // Формируем данные для ErrorLog
-        const errorLogData = entriesWithError.map(entry => ({
-          parent_log_id: savedOperatorSettings._id,
-          start_time: entry.start_time ?? null,
-          calibration_source: entry.calibration_source ?? null,
+        const errorLogData = entriesWithError.map(entry => {
+          const errorData = {
+            parent_log_id: savedOperatorSettings._id,
+            start_time: entry.start_time ?? null,
+            calibration_source: entry.calibration_source ?? null,
+            
+            operator_name: operatorSettingsData.operator_name ?? null,
+            software_version_stand: operatorSettingsData.software_version_stand ?? null,
+            hardware_version_stand: operatorSettingsData.hardware_version_stand ?? null,
+            serial_number_ob_jlink: operatorSettingsData.serial_number_ob_jlink ?? null,
+            stand_id: operatorSettingsData.stand_id ?? null,
+            device_type: operatorSettingsData.device_type ?? null,
+            device_firmware_version: operatorSettingsData.device_firmware_version ?? null,
+            device_firmware_version_parsed: operatorSettingsData.device_firmware_version_parsed ?? [],
+          };
           
-          operator_name: operatorSettingsData.operator_name ?? null,
-          software_version_stand: operatorSettingsData.software_version_stand ?? null,
-          hardware_version_stand: operatorSettingsData.hardware_version_stand ?? null,
-          serial_number_ob_jlink: operatorSettingsData.serial_number_ob_jlink ?? null,
-          stand_id: operatorSettingsData.stand_id ?? null,
-          device_type: operatorSettingsData.device_type ?? null,
-          device_firmware_version: operatorSettingsData.device_firmware_version ?? null,
-          device_firmware_version_parsed: operatorSettingsData.device_firmware_version_parsed ?? [],
-        }));
+          // Преобразуем start_time в объект Date
+          if (entry.start_time) {
+            const [datePart, timePart] = entry.start_time.split(' ');
+            const [day, month, year] = datePart.split('.');
+            const [hours, minutes, seconds] = timePart ? timePart.split(':') : [0, 0, 0];
+            
+            errorData.start_time = new Date(
+              parseInt(year), 
+              parseInt(month) - 1,
+              parseInt(day),
+              parseInt(hours),
+              parseInt(minutes),
+              parseInt(seconds)
+            );
+          }
+          
+          return errorData;
+        });
         
         await ErrorLogModel.insertMany(errorLogData);
         console.log('Лог(и) с ошибками успешно добавлены');

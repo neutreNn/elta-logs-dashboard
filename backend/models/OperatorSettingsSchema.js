@@ -4,7 +4,7 @@ const OperatorSettingsSchema = new mongoose.Schema(
   {
     operator_name: String,
     com_ports: [String],
-    application_start_time: String,
+    application_start_time: Date,
     software_version_stand: String,
     hardware_version_stand: String,
     serial_number_ob_jlink: String,

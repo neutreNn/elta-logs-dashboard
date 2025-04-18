@@ -20,6 +20,7 @@ import CircleLoader from '../components/common/CircleLoader';
 import ErrorMessage from '../components/common/ErrorMessage';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import FilterModal from '../components/modals/FilterModal';
+import formatDate from '../utils/formatDate';
 
 function LogsPage() {
   const [filterParams, setFilterParams] = useState({
@@ -139,7 +140,7 @@ function LogsPage() {
             {logs.length > 0 ? (
               logs.map((log) => (
                 <TableRow key={log._id} hover>
-                  <TableCell>{log.application_start_time}</TableCell>
+                  <TableCell>{formatDate(log.application_start_time)}</TableCell>
                   <TableCell>{log.stand_id}</TableCell>
                   <TableCell>{log.software_version_stand}</TableCell>
                   <TableCell>{log.hardware_version_stand}</TableCell>

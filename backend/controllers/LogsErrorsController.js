@@ -64,25 +64,15 @@ export const getAllLogsErrors = async (req, res) => {
     if (application_start_time_from || application_start_time_to) {
       filter["start_time"] = {};
       
-      // Преобразуем формат ГГГГ-ММ-ДД в ДД.ММ.ГГГГ
       if (application_start_time_from) {
-          // Формат из формы: "2025-02-10"
-          // Преобразуем в "10.02.2025 00:00:00"
-          const parts = application_start_time_from.split('-');
-          if (parts.length === 3) {
-              const formattedDateFrom = `${parts[2]}.${parts[1]}.${parts[0]} 00:00:00`;
-              filter["start_time"].$gte = formattedDateFrom;
-          }
+        filter["start_time"].$gte = new Date(application_start_time_from);
       }
       
       if (application_start_time_to) {
-          // Формат из формы: "2025-02-15"
-          // Преобразуем в "15.02.2025 23:59:59"
-          const parts = application_start_time_to.split('-');
-          if (parts.length === 3) {
-              const formattedDateTo = `${parts[2]}.${parts[1]}.${parts[0]} 23:59:59`;
-              filter["start_time"].$lte = formattedDateTo;
-          }
+        // Устанавливаем время конца дня для даты "до"
+        const dateTo = new Date(application_start_time_to);
+        dateTo.setHours(23, 59, 59, 999);
+        filter["start_time"].$lte = dateTo;
       }
     }
 

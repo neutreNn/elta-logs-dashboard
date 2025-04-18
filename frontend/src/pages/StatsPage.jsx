@@ -14,7 +14,8 @@ import {
   TableRow,
   useTheme,
   alpha,
-  Chip
+  Chip,
+  Button,
 } from '@mui/material';
 import { 
   BarChart, 
@@ -38,6 +39,11 @@ import { useGetAllLogsErrorsQuery } from '../api/apiErrorsLogs';
 import { useGetAllStandsQuery } from '../api/apiStands';
 import { useGetAllOperatorsQuery } from '../api/apiLogs';
 import CircleLoader from '../components/common/CircleLoader';
+import StatCard from '../components/StatCard';
+import SectionTitle from '../components/SectionTitle';
+import FilterStatsModal from '../components/modals/FilterStatsModal';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import Badge from '@mui/material/Badge';
 
 // Кастомные цвета для графиков
 const chartColors = {
@@ -62,11 +68,81 @@ const COLORS = [
 
 function StatsPage() {
   const theme = useTheme();
+
+  // Добавляем новые состояния
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    startMonth: new Date().getMonth(),
+    startYear: new Date().getFullYear(),
+    endMonth: new Date().getMonth(),
+    endYear: new Date().getFullYear()
+  });
+    
+  // Формируем параметры для запросов с учетом фильтра по месяцам
+  const getDateRangeParams = () => {
+    const { startMonth, startYear, endMonth, endYear } = filters;
+    
+    // Формируем начальную дату (первый день месяца)
+    const startDate = `${startYear}-${String(startMonth + 1).padStart(2, '0')}-01`;
+    
+    // Формируем конечную дату (последний день месяца)
+    const lastDay = new Date(endYear, endMonth + 1, 0).getDate();
+    const endDate = `${endYear}-${String(endMonth + 1).padStart(2, '0')}-${lastDay}`;
+    
+    return {
+      application_start_time_from: startDate,
+      application_start_time_to: endDate
+    };
+  };
+    
+  // Получаем параметры для запросов
+  const queryParams = { 
+    limit: 1000,
+    ...getDateRangeParams()
+  };
   
   // Получение данных из Redux
-  const { data: errorsData, isLoading: isLoadingErrors } = useGetAllLogsErrorsQuery({ limit: 1000 });
+  const { data: errorsData, isLoading: isLoadingErrors } = useGetAllLogsErrorsQuery(queryParams);
   const { data: standsData, isLoading: isLoadingStands } = useGetAllStandsQuery({ limit: 1000 });
-  const { data: operatorsData, isLoading: isLoadingOperators } = useGetAllOperatorsQuery({ limit: 1000 });
+  const { data: operatorsData, isLoading: isLoadingOperators } = useGetAllOperatorsQuery(queryParams);
+
+  // Добавляем функции для работы с модальным окном
+  const handleOpenFilterModal = () => {
+    setFilterModalOpen(true);
+  };
+
+  const handleCloseFilterModal = () => {
+    setFilterModalOpen(false);
+  };
+
+  const handleApplyFilters = (newFilters) => {
+    setFilters(newFilters);
+  };
+
+    // Определяем, есть ли активные фильтры (не текущий месяц/год)
+    const hasActiveFilters = () => {
+      const currentDate = new Date();
+      return filters.startMonth !== currentDate.getMonth() || 
+             filters.startYear !== currentDate.getFullYear() || 
+             filters.endMonth !== currentDate.getMonth() || 
+             filters.endYear !== currentDate.getFullYear();
+    };
+    
+    // Формируем текст для отображения текущего периода фильтрации
+    const getFilterPeriodText = () => {
+      const monthNames = [
+        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+      ];
+      
+      const { startMonth, startYear, endMonth, endYear } = filters;
+      
+      if (startMonth === endMonth && startYear === endYear) {
+        return `${monthNames[startMonth]} ${startYear}`;
+      }
+      
+      return `${monthNames[startMonth]} ${startYear} - ${monthNames[endMonth]} ${endYear}`;
+    };
 
   // Состояния для хранения обработанных данных
   const [errorsByStand, setErrorsByStand] = useState([]);
@@ -174,64 +250,41 @@ function StatsPage() {
     );
   }
 
-  // Пользовательский компонент для карточки статистики
-  const StatCard = ({ title, value, icon, color, subtitle }) => (
-    <Card 
-      elevation={2}
-      sx={{ 
-        height: '100%', 
-        transition: 'transform 0.3s, box-shadow 0.3s',
-        '&:hover': {
-          transform: 'translateY(-5px)',
-          boxShadow: theme.shadows[8]
-        }
-      }}
-    >
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <Box 
-            sx={{ 
-              p: 1.5,
-              borderRadius: '50%',
-              backgroundColor: alpha(color, 0.1),
-              mr: 2
-            }}
-          >
-            {icon}
-          </Box>
-          <Typography variant="h6" component="div">
-            {title}
-          </Typography>
-        </Box>
-        <Typography variant="h4" component="div" color={color} fontWeight="bold" sx={{ my: 1 }}>
-          {value}
-        </Typography>
-        {subtitle && (
-          <Typography variant="body2" color="text.secondary">
-            {subtitle}
-          </Typography>
-        )}
-      </CardContent>
-    </Card>
-  );
-
-  // Пользовательский компонент для секции
-  const SectionTitle = ({ title }) => (
-    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, mt: 4 }}>
-      <Box sx={{ 
-        width: 4, 
-        height: 24, 
-        bgcolor: theme.palette.primary.main, 
-        mr: 1 
-      }} />
-      <Typography variant="h5" component="h2">
-        {title}
-      </Typography>
-    </Box>
-  );
-
   return (
     <Box sx={{ padding: 3, bgcolor: '#f5f5f7', width: '100%' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Статистика
+          </Typography>
+          <Typography variant="subtitle1" color="textSecondary">
+            Период: {getFilterPeriodText()}
+          </Typography>
+        </Box>
+        <Button
+          variant="outlined"
+          color={hasActiveFilters() ? "primary" : "inherit"}
+          onClick={handleOpenFilterModal}
+          sx={{ 
+            borderRadius: 1, 
+            width: '48px',
+            minWidth: '48px',
+            height: '48px',
+            padding: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <FilterListIcon />
+        </Button>
+      </Box>
+      <FilterStatsModal
+        open={filterModalOpen}
+        onClose={handleCloseFilterModal}
+        onApply={handleApplyFilters}
+        currentFilters={filters}
+      />
       {/* Общая статистика */}
       <Grid container spacing={3}>
         <Grid item xs={12} sm={6} md={3}>
@@ -273,8 +326,8 @@ function StatsPage() {
 
       <SectionTitle title="Тренды и динамика" />
 
-      <Grid container spacing={3} sx={{ display: 'flex' }}>
-        <Grid item xs={12} md={8} sx={{ flex: 1 }}>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={12}>
           <Paper 
             elevation={2} 
             sx={{ 
@@ -330,7 +383,7 @@ function StatsPage() {
       {/* Тренд ошибок */}
       <Grid container spacing={3}>
         {/* Распределение ошибок по типам устройств (круговая диаграмма) */}
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={6}>
           <Paper 
             elevation={2} 
             sx={{ 
@@ -345,9 +398,6 @@ function StatsPage() {
           >
             <Typography variant="h6" gutterBottom>
               Распределение ошибок по типам устройств
-            </Typography>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              Процентное соотношение
             </Typography>
             <ResponsiveContainer width="100%" height="85%">
               <PieChart>
@@ -381,9 +431,9 @@ function StatsPage() {
 
       <SectionTitle title="Критические показатели" />
 
-      <Grid container spacing={3} sx={{ display: 'flex' }}>
+      <Grid container spacing={3}>
         {/* Ошибки по стендам (график) */}
-        <Grid item xs={12} md={6} sx={{ flex: 1 }}>
+        <Grid item xs={12} md={6}>
           <Paper 
             elevation={2} 
             sx={{ 
@@ -438,7 +488,7 @@ function StatsPage() {
         </Grid>
 
         {/* Ошибки по операторам (график) */}
-        <Grid item xs={12} md={6} sx={{ flex: 1 }}>
+        <Grid item xs={12} md={6}>
           <Paper 
             elevation={2} 
             sx={{ 
@@ -495,8 +545,8 @@ function StatsPage() {
 
       <SectionTitle title="Статистика по стендам" />
 
-      <Grid container spacing={3} sx={{ display: 'flex' }}>
-        <Grid item xs={12} md={6} sx={{ flex: 1 }}>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={12}>
           <Paper 
             elevation={2} 
             sx={{ 
