@@ -14,6 +14,7 @@ import {
   useGetOperatorByIdQuery, 
   useGetCalibrationEntriesByOperatorIdQuery 
 } from '../api/apiLogs';
+import formatDate from '../utils/formatDate';
 
 function LogDetails() {
   const { logId } = useParams();
@@ -74,7 +75,7 @@ function LogDetails() {
           {/* Левый столбец */}
           <Grid item xs={12} sm={6}>
             <Typography gutterBottom><strong>Оператор:</strong> {operatorSettings.operator_name || 'Не указан'}</Typography>
-            <Typography gutterBottom><strong>Дата запуска:</strong> {operatorSettings.application_start_time || 'Не указана'}</Typography>
+            <Typography gutterBottom><strong>Дата запуска:</strong> {formatDate(operatorSettings.application_start_time) || 'Не указана'}</Typography>
             <Typography gutterBottom><strong>СОМ порты:</strong> {operatorSettings.com_ports?.join(', ') || 'Не указан'}</Typography>
             <Typography gutterBottom><strong>Программная версия стенда:</strong> {operatorSettings.software_version_stand || 'Нет данных'}</Typography>
             <Typography gutterBottom><strong>Аппаратная версия стенда:</strong> {operatorSettings.hardware_version_stand || 'Нет данных'}</Typography>

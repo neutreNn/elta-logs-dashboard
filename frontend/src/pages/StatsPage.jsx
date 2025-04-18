@@ -4,8 +4,6 @@ import {
   Grid, 
   Paper, 
   Box,
-  Card, 
-  CardContent,
   Table,
   TableBody,
   TableCell,
@@ -43,7 +41,7 @@ import StatCard from '../components/StatCard';
 import SectionTitle from '../components/SectionTitle';
 import FilterStatsModal from '../components/modals/FilterStatsModal';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import Badge from '@mui/material/Badge';
+import { useGetOperatorNamesQuery } from '../api/apiOperators';
 
 // Кастомные цвета для графиков
 const chartColors = {
@@ -103,8 +101,9 @@ function StatsPage() {
   
   // Получение данных из Redux
   const { data: errorsData, isLoading: isLoadingErrors } = useGetAllLogsErrorsQuery(queryParams);
-  const { data: standsData, isLoading: isLoadingStands } = useGetAllStandsQuery({ limit: 1000 });
+  const { data: standsData, isLoading: isLoadingStands } = useGetAllStandsQuery();
   const { data: operatorsData, isLoading: isLoadingOperators } = useGetAllOperatorsQuery(queryParams);
+  const { data: operatorsNamesData, isLoading: isLoadingOperatorsNames } = useGetOperatorNamesQuery();
 
   // Добавляем функции для работы с модальным окном
   const handleOpenFilterModal = () => {
@@ -210,19 +209,42 @@ function StatsPage() {
 
       setErrorsByDeviceType(deviceTypeErrorsArray);
 
-      // Создаем фиктивные данные тренда ошибок (так как у нас нет исторических данных)
-      // В реальном приложении это должны быть реальные данные по дням/неделям
-      const trendData = [];
-      const now = new Date();
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(now.getDate() - i);
-        const day = date.toLocaleDateString('ru-RU', { weekday: 'short' });
-        trendData.push({
-          name: day,
-          errors: Math.floor(Math.random() * (errorsData.total / 10)) + 1
-        });
+      // Обработка тренда ошибок по дням (реальные данные)
+      const errorsByDay = {};
+      
+      // Получаем даты начала и конца из фильтров
+      const startDate = new Date(filters.startYear, filters.startMonth, 1);
+      const endDate = new Date(filters.endYear, filters.endMonth + 1, 0); // последний день месяца
+      
+      // Инициализируем все дни нулевыми значениями
+      const currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        const dateKey = currentDate.toISOString().split('T')[0]; // формат YYYY-MM-DD
+        errorsByDay[dateKey] = 0;
+        currentDate.setDate(currentDate.getDate() + 1);
       }
+      
+      // Подсчитываем ошибки по дням
+      errorsData.logs.forEach(log => {
+        if (log.start_time) {
+          const logDate = new Date(log.start_time);
+          const dateKey = logDate.toISOString().split('T')[0];
+          if (errorsByDay[dateKey] !== undefined) {
+            errorsByDay[dateKey]++;
+          }
+        }
+      });
+      
+      // Преобразуем в массив для графика
+      const trendData = Object.entries(errorsByDay).map(([date, count]) => {
+        const formatDate = new Date(date);
+        return {
+          name: formatDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }),
+          fullDate: formatDate,
+          errors: count
+        };
+      }).sort((a, b) => a.fullDate - b.fullDate); // сортируем по дате
+      
       setErrorTrends(trendData);
 
       // Обработка общей статистики
@@ -235,14 +257,14 @@ function StatsPage() {
         totalLogs: operatorsData.total || 0,
         totalErrors: errorsData.total || 0,
         totalStands: standsData.total || 0,
-        totalOperators: new Set(operatorsData.operatorSettings.map(os => os.operator_name)).size,
+        totalOperators: operatorsNamesData.length,
         activeStands,
         standsInMaintenance
       });
     }
-  }, [errorsData, standsData, operatorsData]);
+  }, [errorsData, standsData, operatorsData, operatorsNamesData, filters]);
 
-  if (isLoadingErrors || isLoadingStands || isLoadingOperators) {
+  if (isLoadingErrors || isLoadingStands || isLoadingOperators || isLoadingOperatorsNames) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
         <CircleLoader />
@@ -341,39 +363,72 @@ function StatsPage() {
             }}
           >
             <Typography variant="h6" gutterBottom>
-              Динамика ошибок за последнюю неделю
+              Динамика ошибок за период
             </Typography>
             <Typography variant="body2" color="text.secondary" gutterBottom>
               Количество зарегистрированных ошибок по дням
             </Typography>
-            <ResponsiveContainer width="100%" height="85%">
-              <LineChart
-                data={errorTrends}
-                margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.text.secondary, 0.2)} />
-                <XAxis 
-                  dataKey="name"
-                  tick={{ fill: theme.palette.text.secondary }}
-                />
-                <YAxis tick={{ fill: theme.palette.text.secondary }} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: theme.palette.background.paper,
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: 4
-                  }} 
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="errors" 
-                  name="Ошибки" 
-                  stroke={chartColors.error} 
-                  activeDot={{ r: 8 }} 
-                  strokeWidth={2}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            
+            {/* Контейнер только для графика с горизонтальной прокруткой */}
+            <Box sx={{ 
+              width: '100%', 
+              height: '85%', 
+              overflowX: 'auto', 
+              overflowY: 'hidden',
+              '&::-webkit-scrollbar': {
+                height: '8px'
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.2),
+                borderRadius: '4px'
+              }
+            }}>
+              {/* Внутренний контейнер с фиксированной шириной */}
+              <Box sx={{
+                width: Math.max(errorTrends.length * 20, '100%'), // Уменьшил ширину на элемент с 40px до 20px
+                minWidth: '100%',
+                height: '100%'
+              }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={errorTrends}
+                    margin={{ top: 10, right: 30, left: 0, bottom: 30 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.text.secondary, 0.2)} />
+                    <XAxis 
+                      dataKey="name"
+                      tick={{ fill: theme.palette.text.secondary, fontSize: 10 }} // Уменьшил размер шрифта
+                      height={50}
+                      tickMargin={10}
+                      interval={Math.max(0, Math.floor(errorTrends.length / 30))} // Показываем примерно 30 подписей
+                      angle={-45}
+                      textAnchor="end"
+                    />
+                    <YAxis 
+                      tick={{ fill: theme.palette.text.secondary }} 
+                      width={35} // Уменьшил ширину
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: theme.palette.background.paper,
+                        border: `1px solid ${theme.palette.divider}`,
+                        borderRadius: 4
+                      }}
+                      formatter={(value) => [`${value} ошибок`, 'Количество']}
+                      labelFormatter={(label) => `Дата: ${label}`}
+                    />
+                    <Bar 
+                      dataKey="errors" 
+                      name="Ошибки" 
+                      fill={chartColors.error}
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={8} // Уменьшил максимальную ширину столбца
+                      minPointSize={4} // Уменьшил минимальный размер
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
+            </Box>
           </Paper>
         </Grid>
       </Grid>

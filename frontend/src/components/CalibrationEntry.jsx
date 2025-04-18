@@ -4,6 +4,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import LinkIcon from '@mui/icons-material/Link';
 import { useNavigate } from 'react-router-dom';
+import formatDate from '../utils/formatDate';
 
 const CalibrationEntry = ({ calibration, index }) => {
   const [open, setOpen] = useState(false);
@@ -39,7 +40,7 @@ const CalibrationEntry = ({ calibration, index }) => {
       <Grid container spacing={10}>
         {/* Левый столбец */}
         <Grid item xs={12} sm={6}>
-            <Typography sx={{ marginBottom: 1 }}><strong>Время:</strong> {calibration.start_time ?? 'Нет данных'}</Typography>
+            <Typography sx={{ marginBottom: 1 }}><strong>Время:</strong> {formatDate(calibration.start_time) ?? 'Нет данных'}</Typography>
             <Typography sx={{ marginBottom: 1 }}><strong>Конец калибровки:</strong> температура: {calibration.end_of_calibration?.temperature ?? 'Нет данных'}°C, напряжение: {calibration.end_of_calibration?.sensor_voltage ?? 'Нет данных'} V</Typography>
             <Typography sx={{ marginBottom: 1 }}><strong>Активный ток:</strong> {calibration.active_mode_current ?? 'Нет данных'}</Typography>
             <Typography sx={{ marginBottom: 2 }}><strong>Длительность теста:</strong> {calibration.test_duration ?? 'Нет данных'}</Typography>
