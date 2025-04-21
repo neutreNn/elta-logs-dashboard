@@ -147,6 +147,7 @@ function StatsPage() {
   const [errorsByStand, setErrorsByStand] = useState([]);
   const [errorsByOperator, setErrorsByOperator] = useState([]);
   const [errorsByDeviceType, setErrorsByDeviceType] = useState([]);
+  const [errorsByNumber, setErrorsByNumber] = useState([]);
   const [topStandsWithErrors, setTopStandsWithErrors] = useState([]);
   const [errorTrends, setErrorTrends] = useState([]);
   const [totalStats, setTotalStats] = useState({
@@ -208,6 +209,24 @@ function StatsPage() {
       }));
 
       setErrorsByDeviceType(deviceTypeErrorsArray);
+
+      const errorNumberMap = {};
+      errorsData.logs.forEach(log => {
+        if (log.error_number !== undefined) {
+          const errorKey = `№${log.error_number}`;
+          errorNumberMap[errorKey] = (errorNumberMap[errorKey] || 0) + 1;
+        } else {
+          errorNumberMap['Неизвестно'] = (errorNumberMap['Неизвестно'] || 0) + 1;
+        }
+      });
+
+      const errorNumberArray = Object.entries(errorNumberMap).map(([errorNum, count]) => ({
+        name: errorNum,
+        value: count
+      })).sort((a, b) => b.value - a.value);
+
+      // После setErrorsByDeviceType добавьте:
+      setErrorsByNumber(errorNumberArray);
 
       // Обработка тренда ошибок по дням (реальные данные)
       const errorsByDay = {};
@@ -465,6 +484,52 @@ function StatsPage() {
                   dataKey="value"
                 >
                   {errorsByDeviceType.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value) => [`${value} ошибок`, 'Количество']}
+                  contentStyle={{ 
+                    backgroundColor: theme.palette.background.paper,
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: 4
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </Paper>
+        </Grid>
+
+        {/* Распределение ошибок по номеру ошибки (круговая диаграмма) */}
+        <Grid item xs={12} md={6}>
+          <Paper 
+            elevation={2} 
+            sx={{ 
+              p: 3, 
+              height: '360px',
+              borderRadius: 2,
+              transition: 'transform 0.3s, box-shadow 0.3s',
+              '&:hover': {
+                boxShadow: theme.shadows[8]
+              }
+            }}
+          >
+            <Typography variant="h6" gutterBottom>
+              Распределение ошибок по номеру
+            </Typography>
+            <ResponsiveContainer width="100%" height="85%">
+              <PieChart>
+                <Pie
+                  data={errorsByNumber}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {errorsByNumber.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>

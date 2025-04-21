@@ -72,6 +72,7 @@ const ErrorCard = ({ error, isLast }) => {
         <Typography variant="subtitle1"><strong>Информация об операторе и стенде:</strong></Typography>
         <Box sx={{ mt: 1, ml: 2 }}>
           <Typography><strong>Оператор:</strong> {error.operator_name ?? 'Нет данных'}</Typography>
+          <Typography><strong>Ошибка на номере:</strong> {error.error_number ?? 'Нет данных'}</Typography>
           <Typography><strong>ПО стенда:</strong> {error.software_version_stand ?? 'Нет данных'}</Typography>
           <Typography><strong>Железо стенда:</strong> {error.hardware_version_stand ?? 'Нет данных'}</Typography>
           <Typography><strong>JLink:</strong> {error.serial_number_ob_jlink ?? 'Нет данных'}</Typography>
