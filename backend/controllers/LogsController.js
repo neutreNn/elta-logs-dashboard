@@ -276,7 +276,7 @@ export const createLogEntry = async (req, res) => {
             parent_log_id: savedOperatorSettings._id,
             start_time: entry.start_time ?? null,
             calibration_source: entry.calibration_source ?? null,
-            
+            error_number: entry.error_number ?? null,
             operator_name: operatorSettingsData.operator_name ?? null,
             software_version_stand: operatorSettingsData.software_version_stand ?? null,
             hardware_version_stand: operatorSettingsData.hardware_version_stand ?? null,

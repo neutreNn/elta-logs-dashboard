@@ -7,6 +7,7 @@ const ErrorLogSchema = new mongoose.Schema({
     // calibration data
     start_time: Date,
     calibration_source: String,
+    error_number: Number,
   
     // Добавленные из operator_settings
     operator_name: String,

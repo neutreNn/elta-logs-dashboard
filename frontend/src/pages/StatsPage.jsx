@@ -276,9 +276,6 @@ function StatsPage() {
     <Box sx={{ padding: 3, bgcolor: '#f5f5f7', width: '100%' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Статистика
-          </Typography>
           <Typography variant="subtitle1" color="textSecondary">
             Период: {getFilterPeriodText()}
           </Typography>
