@@ -430,8 +430,14 @@ export const getSuccessfulCalibrationStats = async (req, res) => {
       },
       { $sort: { date: 1 } }
     ]);
+
+    // Подсчёт общего количества
+    const totalSuccess = successfulCalibrationsByDay.reduce((sum, entry) => sum + entry.count, 0);
     
-    res.json({ successfulCalibrationsByDay });
+    res.json({ 
+      successfulCalibrationsByDay,
+      totalSuccess
+    });
     
   } catch (err) {
     console.error("Ошибка при получении статистики успешных калибровок:", err);

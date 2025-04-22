@@ -26,8 +26,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line
 } from 'recharts';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -35,7 +33,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import SpeedIcon from '@mui/icons-material/Speed';
 import { useGetAllLogsErrorsQuery } from '../api/apiErrorsLogs';
 import { useGetAllStandsQuery } from '../api/apiStands';
-import { useGetAllOperatorsQuery, useGetSuccessfulCalibrationQuery } from '../api/apiLogs';
+import { useGetSuccessfulCalibrationQuery } from '../api/apiLogs';
 import CircleLoader from '../components/common/CircleLoader';
 import StatCard from '../components/StatCard';
 import SectionTitle from '../components/SectionTitle';
@@ -102,7 +100,6 @@ function StatsPage() {
   // Получение данных из Redux
   const { data: errorsData, isLoading: isLoadingErrors } = useGetAllLogsErrorsQuery(queryParams);
   const { data: standsData, isLoading: isLoadingStands } = useGetAllStandsQuery();
-  const { data: operatorsData, isLoading: isLoadingOperators } = useGetAllOperatorsQuery(queryParams);
   const { data: operatorsNamesData, isLoading: isLoadingOperatorsNames } = useGetOperatorNamesQuery();
   const { data: calibrationStatsData, isLoading: isLoadingCalibrationStats } = useGetSuccessfulCalibrationQuery(queryParams);
 
@@ -153,7 +150,7 @@ function StatsPage() {
   const [errorTrends, setErrorTrends] = useState([]);
   const [calibrationTrends, setCalibrationTrends] = useState([]);
   const [totalStats, setTotalStats] = useState({
-    totalLogs: 0,
+    totalSuccess: 0,
     totalErrors: 0,
     totalStands: 0,
     totalOperators: 0,
@@ -163,7 +160,7 @@ function StatsPage() {
 
   // Обработка данных при их получении
   useEffect(() => {
-    if (errorsData?.logs && standsData?.stands && operatorsData?.operatorSettings) {
+    if (errorsData?.logs && standsData?.stands && calibrationStatsData.successfulCalibrationsByDay) {
       // Обработка ошибок по стендам
       const standErrorsMap = {};
       errorsData.logs.forEach(log => {
@@ -303,7 +300,7 @@ function StatsPage() {
       ).length;
 
       setTotalStats({
-        totalLogs: operatorsData.total || 0,
+        totalSuccess: calibrationStatsData.totalSuccess || 0,
         totalErrors: errorsData.total || 0,
         totalStands: standsData.total || 0,
         totalOperators: operatorsNamesData.length,
@@ -311,9 +308,9 @@ function StatsPage() {
         standsInMaintenance
       });
     }
-  }, [errorsData, standsData, operatorsData, operatorsNamesData, calibrationStatsData, filters]);
+  }, [errorsData, standsData, operatorsNamesData, calibrationStatsData, filters]);
 
-  if (isLoadingErrors || isLoadingStands || isLoadingOperators || isLoadingOperatorsNames || isLoadingCalibrationStats) {
+  if (isLoadingErrors || isLoadingStands || isLoadingOperatorsNames || isLoadingCalibrationStats) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
         <CircleLoader />
@@ -357,11 +354,13 @@ function StatsPage() {
       <Grid container spacing={3}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard 
-            title="Всего логов" 
-            value={totalStats.totalLogs}
+            title="Выпуски" 
+            value={totalStats.totalSuccess}
             icon={<SpeedIcon sx={{ color: chartColors.primary }} />}
             color={chartColors.primary}
-            subtitle="Общее количество логов"
+            subtitle={`${(totalStats.totalSuccess + totalStats.totalErrors) 
+              ? Math.round((totalStats.totalSuccess / (totalStats.totalSuccess + totalStats.totalErrors)) * 100) 
+              : 0}% от общего кол-во`}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -370,7 +369,9 @@ function StatsPage() {
             value={totalStats.totalErrors}
             icon={<ErrorOutlineIcon sx={{ color: chartColors.error }} />}
             color={chartColors.error}
-            subtitle="Общее количество ошибок"
+            subtitle={`${(totalStats.totalSuccess + totalStats.totalErrors) 
+              ? Math.round((totalStats.totalErrors / (totalStats.totalSuccess + totalStats.totalErrors)) * 100) 
+              : 0}% от общего кол-во`}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
