@@ -64,6 +64,13 @@ const apiLogs = createApi({
         "CalibrationEntries"
       ],
     }),
+
+    getSuccessfulCalibration: builder.query({
+      query: (params) => ({
+        url: "/logs/successful-calibration",
+        params,
+      }),
+    }),
   }),
 });
 
@@ -72,7 +79,8 @@ export const {
   useGetOperatorByIdQuery,
   useGetCalibrationEntriesByOperatorIdQuery,
   useCreateLogEntryMutation,
-  useRemoveLogEntryMutation 
+  useRemoveLogEntryMutation,
+  useGetSuccessfulCalibrationQuery
 } = apiLogs;
 
 export default apiLogs;

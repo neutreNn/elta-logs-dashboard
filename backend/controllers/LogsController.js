@@ -369,10 +369,81 @@ export const removeLogEntry = async (req, res) => {
   }
 };
 
+export const getSuccessfulCalibrationStats = async (req, res) => {
+  try {
+    const { 
+      application_start_time_from, 
+      application_start_time_to 
+    } = req.query;
+    
+    const filter = {};
+    
+    // Обработка дат для фильтрации
+    if (application_start_time_from || application_start_time_to) {
+      filter["start_time"] = {};
+      
+      if (application_start_time_from) {
+        filter["start_time"].$gte = new Date(application_start_time_from);
+      }
+      
+      if (application_start_time_to) {
+        // Устанавливаем время конца дня для даты "до"
+        const dateTo = new Date(application_start_time_to);
+        dateTo.setHours(23, 59, 59, 999);
+        filter["start_time"].$lte = dateTo;
+      }
+    }
+    
+    // Добавляем условие успешной калибровки
+    filter["calibration_successful"] = true;
+
+    // Агрегация данных по дням
+    const successfulCalibrationsByDay = await CalibrationEntryModel.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$start_time" },
+            month: { $month: "$start_time" },
+            day: { $dayOfMonth: "$start_time" }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          date: {
+            $dateToString: {
+              format: "%Y-%m-%d",
+              date: {
+                $dateFromParts: {
+                  year: "$_id.year",
+                  month: "$_id.month",
+                  day: "$_id.day"
+                }
+              }
+            }
+          },
+          count: 1
+        }
+      },
+      { $sort: { date: 1 } }
+    ]);
+    
+    res.json({ successfulCalibrationsByDay });
+    
+  } catch (err) {
+    console.error("Ошибка при получении статистики успешных калибровок:", err);
+    res.status(500).json({ message: "Ошибка при получении статистики" });
+  }
+};
+
 export const LogsController = { 
   getAllOperatorSettings, 
   getOneOperatorSettings, 
   getCalibrationEntriesByOperatorId,
   createLogEntry, 
-  removeLogEntry
+  removeLogEntry,
+  getSuccessfulCalibrationStats
 };

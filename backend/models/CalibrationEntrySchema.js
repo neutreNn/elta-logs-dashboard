@@ -7,7 +7,7 @@ const CalibrationEntrySchema = new mongoose.Schema(
       ref: "OperatorSettings",
       required: true
     },
-    start_time: String,
+    start_time: Date,
     reference_voltage_steps: [
       {
         step: Number,
@@ -38,6 +38,7 @@ const CalibrationEntrySchema = new mongoose.Schema(
     serial_number: String,
     error_detected: Boolean,
     test_duration: String,
+    calibration_successful: Boolean,
     calibration_source: String,
   },
   { timestamps: true }

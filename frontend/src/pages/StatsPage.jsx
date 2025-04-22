@@ -35,7 +35,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import SpeedIcon from '@mui/icons-material/Speed';
 import { useGetAllLogsErrorsQuery } from '../api/apiErrorsLogs';
 import { useGetAllStandsQuery } from '../api/apiStands';
-import { useGetAllOperatorsQuery } from '../api/apiLogs';
+import { useGetAllOperatorsQuery, useGetSuccessfulCalibrationQuery } from '../api/apiLogs';
 import CircleLoader from '../components/common/CircleLoader';
 import StatCard from '../components/StatCard';
 import SectionTitle from '../components/SectionTitle';
@@ -104,6 +104,7 @@ function StatsPage() {
   const { data: standsData, isLoading: isLoadingStands } = useGetAllStandsQuery();
   const { data: operatorsData, isLoading: isLoadingOperators } = useGetAllOperatorsQuery(queryParams);
   const { data: operatorsNamesData, isLoading: isLoadingOperatorsNames } = useGetOperatorNamesQuery();
+  const { data: calibrationStatsData, isLoading: isLoadingCalibrationStats } = useGetSuccessfulCalibrationQuery(queryParams);
 
   // Добавляем функции для работы с модальным окном
   const handleOpenFilterModal = () => {
@@ -150,6 +151,7 @@ function StatsPage() {
   const [errorsByNumber, setErrorsByNumber] = useState([]);
   const [topStandsWithErrors, setTopStandsWithErrors] = useState([]);
   const [errorTrends, setErrorTrends] = useState([]);
+  const [calibrationTrends, setCalibrationTrends] = useState([]);
   const [totalStats, setTotalStats] = useState({
     totalLogs: 0,
     totalErrors: 0,
@@ -230,18 +232,46 @@ function StatsPage() {
 
       // Обработка тренда ошибок по дням (реальные данные)
       const errorsByDay = {};
+
+      // Обработка успешных калибровок по дням
+      const calibrationsByDay = {};
       
       // Получаем даты начала и конца из фильтров
       const startDate = new Date(filters.startYear, filters.startMonth, 1);
       const endDate = new Date(filters.endYear, filters.endMonth + 1, 0); // последний день месяца
+
+      // Инициализируем все дни нулевыми значениями
+      const currentDateSuccess = new Date(startDate);
+      while (currentDateSuccess <= endDate) {
+        const dateKey = currentDateSuccess.toISOString().split('T')[0]; // формат YYYY-MM-DD
+        calibrationsByDay[dateKey] = 0;
+        currentDateSuccess.setDate(currentDateSuccess.getDate() + 1);
+      }
       
       // Инициализируем все дни нулевыми значениями
-      const currentDate = new Date(startDate);
-      while (currentDate <= endDate) {
-        const dateKey = currentDate.toISOString().split('T')[0]; // формат YYYY-MM-DD
+      const currentDateError = new Date(startDate);
+      while (currentDateError <= endDate) {
+        const dateKey = currentDateError.toISOString().split('T')[0]; // формат YYYY-MM-DD
         errorsByDay[dateKey] = 0;
-        currentDate.setDate(currentDate.getDate() + 1);
+        currentDateError.setDate(currentDateError.getDate() + 1);
       }
+
+      // Подсчитываем успешные случаи по дням
+      calibrationStatsData.successfulCalibrationsByDay.forEach(item => {
+        calibrationsByDay[item.date] = item.count;
+      });
+
+      // Преобразуем в массив для графика
+      const calibrationTrendData = Object.entries(calibrationsByDay).map(([date, count]) => {
+        const formatDate = new Date(date);
+        return {
+          name: formatDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }),
+          fullDate: formatDate,
+          successful: count
+        };
+      }).sort((a, b) => a.fullDate - b.fullDate); // сортируем по дате
+
+      setCalibrationTrends(calibrationTrendData);
       
       // Подсчитываем ошибки по дням
       errorsData.logs.forEach(log => {
@@ -281,9 +311,9 @@ function StatsPage() {
         standsInMaintenance
       });
     }
-  }, [errorsData, standsData, operatorsData, operatorsNamesData, filters]);
+  }, [errorsData, standsData, operatorsData, operatorsNamesData, calibrationStatsData, filters]);
 
-  if (isLoadingErrors || isLoadingStands || isLoadingOperators || isLoadingOperatorsNames) {
+  if (isLoadingErrors || isLoadingStands || isLoadingOperators || isLoadingOperatorsNames || isLoadingCalibrationStats) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
         <CircleLoader />
@@ -366,6 +396,88 @@ function StatsPage() {
       <SectionTitle title="Тренды и динамика" />
 
       <Grid container spacing={3}>
+        <Grid item xs={12} md={12}>
+          <Paper 
+            elevation={2} 
+            sx={{ 
+              p: 3, 
+              height: '360px',
+              borderRadius: 2,
+              transition: 'transform 0.3s, box-shadow 0.3s',
+              '&:hover': {
+                boxShadow: theme.shadows[8]
+              }
+            }}
+          >
+            <Typography variant="h6" gutterBottom>
+              Динамика выпуска за период
+            </Typography>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Количество выпуска по дням
+            </Typography>
+            
+            {/* Контейнер для графика с горизонтальной прокруткой */}
+            <Box sx={{ 
+              width: '100%', 
+              height: '85%', 
+              overflowX: 'auto', 
+              overflowY: 'hidden',
+              '&::-webkit-scrollbar': {
+                height: '8px'
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.2),
+                borderRadius: '4px'
+              }
+            }}>
+              {/* Внутренний контейнер с фиксированной шириной */}
+              <Box sx={{
+                width: Math.max(calibrationTrends.length * 20, '100%'),
+                minWidth: '100%',
+                height: '100%'
+              }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={calibrationTrends}
+                    margin={{ top: 10, right: 30, left: 0, bottom: 30 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.text.secondary, 0.2)} />
+                    <XAxis 
+                      dataKey="name"
+                      tick={{ fill: theme.palette.text.secondary, fontSize: 10 }}
+                      height={50}
+                      tickMargin={10}
+                      interval={Math.max(0, Math.floor(calibrationTrends.length / 30))}
+                      angle={-45}
+                      textAnchor="end"
+                    />
+                    <YAxis 
+                      tick={{ fill: theme.palette.text.secondary }} 
+                      width={35}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: theme.palette.background.paper,
+                        border: `1px solid ${theme.palette.divider}`,
+                        borderRadius: 4
+                      }}
+                      formatter={(value) => [`${value} выпуска`, 'Количество']}
+                      labelFormatter={(label) => `Дата: ${label}`}
+                    />
+                    <Bar 
+                      dataKey="successful" 
+                      name="Успешные калибровки" 
+                      fill={chartColors.success}
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={8}
+                      minPointSize={4}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
+            </Box>
+          </Paper>
+        </Grid>
         <Grid item xs={12} md={12}>
           <Paper 
             elevation={2} 

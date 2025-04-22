@@ -25,6 +25,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(cors());
 
 // Маршруты для логов
+app.get('/logs/successful-calibration', LogsController.getSuccessfulCalibrationStats);
 app.get('/logs', LogsController.getAllOperatorSettings);
 app.get('/logs/:id', LogsController.getOneOperatorSettings);
 app.post('/logs', LogsController.createLogEntry);
