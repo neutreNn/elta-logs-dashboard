@@ -37,30 +37,30 @@ app.post('/auth/validate', checkAuth, (req, res) => {
 });
 
 // Маршруты для логов
-app.get('/logs/successful-calibration', LogsController.getSuccessfulCalibrationStats);
-app.get('/logs', LogsController.getAllOperatorSettings);
-app.get('/logs/:id', LogsController.getOneOperatorSettings);
-app.post('/logs', LogsController.createLogEntry);
-app.delete('/logs/:id', LogsController.removeLogEntry);
-app.get('/logs/:id/calibration-entries', LogsController.getCalibrationEntriesByOperatorId);
+app.get('/logs/successful-calibration', checkAuth, LogsController.getSuccessfulCalibrationStats);
+app.get('/logs', checkAuth, LogsController.getAllOperatorSettings);
+app.get('/logs/:id', checkAuth, LogsController.getOneOperatorSettings);
+app.post('/logs', checkAuth, LogsController.createLogEntry);
+app.delete('/logs/:id', checkAuth, LogsController.removeLogEntry);
+app.get('/logs/:id/calibration-entries', checkAuth, LogsController.getCalibrationEntriesByOperatorId);
 
 // Маршруты для ошибок
-app.get('/logs-errors', LogsErrorsController.getAllLogsErrors);
-app.get('/logs-errors/unviewed', LogsErrorsController.hasUnviewedErrors);
-app.put('/logs-errors/mark-viewed', LogsErrorsController.markAllErrorsAsViewed);
+app.get('/logs-errors', checkAuth, LogsErrorsController.getAllLogsErrors);
+app.get('/logs-errors/unviewed', checkAuth, LogsErrorsController.hasUnviewedErrors);
+app.put('/logs-errors/mark-viewed', checkAuth, LogsErrorsController.markAllErrorsAsViewed);
 
 // Маршруты для выпадающих списков
-app.get('/operators', OperatorsController.getOperatorNames);
-app.get('/stand-ids', StandIdsController.getStandIds);
+app.get('/operators', checkAuth, OperatorsController.getOperatorNames);
+app.get('/stand-ids', checkAuth, StandIdsController.getStandIds);
 
 // Маршруты для стендов
-app.get('/stands', StandsController.getAllStands);
-app.get('/stands/:id', StandsController.getStandById);
-app.get('/stands/by-stand-id/:standId', StandsController.getStandByStandId);
-app.post('/stands', StandsController.createStand);
-app.put('/stands/:id', StandsController.updateStand);
-app.post('/stands/:id/repair', StandsController.addRepairRecord);
-app.delete('/stands/:id', StandsController.removeStand);
+app.get('/stands', checkAuth, StandsController.getAllStands);
+app.get('/stands/:id', checkAuth, StandsController.getStandById);
+app.get('/stands/by-stand-id/:standId', checkAuth, StandsController.getStandByStandId);
+app.post('/stands', checkAuth, StandsController.createStand);
+app.put('/stands/:id', checkAuth, StandsController.updateStand);
+app.post('/stands/:id/repair', checkAuth, StandsController.addRepairRecord);
+app.delete('/stands/:id', checkAuth, StandsController.removeStand);
 
 app.listen(4444, (err) => {
     if (err) {
