@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Route, Routes, NavLink } from 'react-router-dom';
-import { CssBaseline, Drawer, Box, List, ListItem, Badge } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { CssBaseline, Box } from '@mui/material';
 import HomePage from './pages/HomePage';
 import LogsPage from './pages/LogsPage';
 import LogDetails from './components/LogDetails';
@@ -9,136 +9,65 @@ import LogsErrorsPage from './pages/LogsErrosPage';
 import StandsPage from './pages/StandsPage';
 import StandDetails from './components/StandDetails';
 import StatsPage from './pages/StatsPage';
-import { useHasUnviewedErrorsQuery } from './api/apiErrorsLogs';
-import NotificationsIcon from '@mui/icons-material/Notifications';
-import HomeIcon from '@mui/icons-material/Home';
-import ArticleIcon from '@mui/icons-material/Article';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import BuildIcon from '@mui/icons-material/Build';
-import BarChartIcon from '@mui/icons-material/BarChart';
+import { useValidateTokenMutation } from './api/apiUser';
+import CircleLoader from './components/common/CircleLoader';
+import ProtectedRoute from './components/sections/ProtectedRoute';
+import LoginPage from './pages/LoginPage';
+import SideNavDrawer from './components/sections/SideNavDrawer';
 
 function App() {
-  // Получаем информацию о наличии непрочитанных ошибок
-  const { data: unviewedData } = useHasUnviewedErrorsQuery();
-  const hasUnviewed = unviewedData?.hasUnviewed || false;
-  
-  // Активный элемент меню
-  const [activeItem, setActiveItem] = useState(window.location.pathname);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [validateToken] = useValidateTokenMutation();
 
-  // Стили для навигационных элементов
-  const navItemStyle = (isActive) => ({
-    display: 'flex',
-    alignItems: 'center',
-    padding: '12px 20px',
-    margin: '8px 12px',
-    borderRadius: '8px',
-    textDecoration: 'none',
-    color: isActive ? '#fff' : 'rgba(0, 0, 0, 0.87)',
-    backgroundColor: isActive ? '#1976d2' : 'transparent',
-    transition: 'all 0.3s ease',
-    '&:hover': {
-      backgroundColor: isActive ? '#1565c0' : 'rgba(0, 0, 0, 0.04)',
-    },
-    fontWeight: 500,
-    fontSize: '15px',
-  });
+  useEffect(() => {
+    const checkToken = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setIsAuthenticated(false);
+          setLoading(false);
+          return;
+        }
+        
+        // Проверяем валидность токена на бэкенде
+        const response = await validateToken().unwrap();
+        if (response && response.valid) {
+          setIsAuthenticated(true);
+        } else {
+          localStorage.removeItem('token');
+          setIsAuthenticated(false);
+        }
+      } catch (err) {
+        console.error('Ошибка валидации токена:', err);
+        localStorage.removeItem('token');
+        setIsAuthenticated(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkToken();
+  }, [validateToken]);
 
-  // Стиль для иконок
-  const iconStyle = {
-    marginRight: '12px',
-    fontSize: '20px',
-  };
-
-  // Компонент для элемента навигации
-  const NavItem = ({ to, icon, text, hasNotification }) => {
-    const isActive = activeItem === to;
-    
+  if (!isAuthenticated) {
     return (
-      <ListItem 
-        disablePadding
-        onClick={() => setActiveItem(to)}
-      >
-        <NavLink 
-          to={to}
-          style={{
-            width: '100%',
-            ...navItemStyle(isActive)
-          }}
-        >
-          {icon}
-          <span style={{ flexGrow: 1 }}>{text}</span>
-          {hasNotification && (
-            <Badge 
-              color="error" 
-              variant="dot"
-              sx={{ 
-                '& .MuiBadge-badge': {
-                  width: 8,
-                  height: 8,
-                  minWidth: 'auto',
-                }
-              }}
-            >
-              <NotificationsIcon 
-                fontSize="small" 
-                sx={{ 
-                  color: isActive ? '#fff' : '#f44336',
-                }}
-              />
-            </Badge>
-          )}
-        </NavLink>
-      </ListItem>
+      <Router>
+        <CssBaseline />
+        <Routes>
+          <Route path="/" element={<LoginPage setIsAuthenticated={setIsAuthenticated} />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Router>
     );
-  };
+  }
+
+  if (loading) return <CircleLoader />;
 
   return (
     <Router>
       <Box sx={{ display: 'flex' }}>
         <CssBaseline />
-        <Drawer
-          sx={{
-            width: 240,
-            flexShrink: 0,
-            '& .MuiDrawer-paper': {
-              width: 240,
-              boxSizing: 'border-box',
-              boxShadow: '0px 3px 10px rgba(0, 0, 0, 0.1)',
-              borderRight: 'none',
-            },
-          }}
-          variant="permanent"
-          anchor="left"
-        >
-          <List sx={{ padding: '10px 0' }}>
-            <NavItem 
-              to="/" 
-              icon={<HomeIcon sx={iconStyle} />} 
-              text="Главная" 
-            />
-            <NavItem 
-              to="/logs" 
-              icon={<ArticleIcon sx={iconStyle} />} 
-              text="Логи" 
-            />
-            <NavItem 
-              to="/errors" 
-              icon={<ErrorOutlineIcon sx={iconStyle} />} 
-              text="Ошибки" 
-              hasNotification={hasUnviewed}
-            />
-            <NavItem 
-              to="/stands" 
-              icon={<BuildIcon sx={iconStyle} />} 
-              text="Стенды" 
-            />
-            <NavItem 
-              to="/stats" 
-              icon={<BarChartIcon sx={iconStyle} />} 
-              text="Статистика" 
-            />
-          </List>
-        </Drawer>
+        <SideNavDrawer />
         <Box
           component="main"
           sx={{
@@ -149,13 +78,17 @@ function App() {
         >
           <Header />
           <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/logs" element={<LogsPage />} />
-            <Route path="/logs/:logId" element={<LogDetails />} />
-            <Route path="/errors" element={<LogsErrorsPage />} />
-            <Route path="/stands" element={<StandsPage />} />
-            <Route path="/stands/:standId" element={<StandDetails />} />
-            <Route path="/stats" element={<StatsPage />} />
+            <Route path="/" element={<Navigate to="/home" />} />
+            <Route element={<ProtectedRoute isAuthenticated={isAuthenticated} />}>
+              <Route path="/logs" element={<LogsPage />} />
+              <Route path="/logs/:logId" element={<LogDetails />} />
+              <Route path="/errors" element={<LogsErrorsPage />} />
+              <Route path="/stands" element={<StandsPage />} />
+              <Route path="/stands/:standId" element={<StandDetails />} />
+              <Route path="/stats" element={<StatsPage />} />
+              <Route path="/home" element={<HomePage />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/home" />} />
           </Routes>
         </Box>
       </Box>

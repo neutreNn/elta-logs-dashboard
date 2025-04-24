@@ -8,6 +8,10 @@ import { LogsErrorsController } from './controllers/LogsErrorsController.js';
 import { OperatorsController } from './controllers/OperatorsController.js';
 import { StandsController } from './controllers/StandsController.js';
 import { StandIdsController } from './controllers/StandIdController.js';
+import checkAuth from './utils/checkAuth.js';
+import { loginValidation, registerValidation } from './validation.js';
+import handleValidationErrors from './utils/handleValidationErrors.js';
+import { UserController } from './controllers/UserController.js';
 
 dotenv.config();
 
@@ -23,6 +27,14 @@ const app = express();
 
 app.use(express.json({ limit: '50mb' }));
 app.use(cors());
+
+//Маршруты для авторизации
+app.get('/auth/me', checkAuth, UserController.getMe);
+app.post('/auth/login', loginValidation, handleValidationErrors, UserController.login);
+app.post('/auth/register', registerValidation, handleValidationErrors, UserController.register);
+app.post('/auth/validate', checkAuth, (req, res) => {
+    res.status(200).json({ valid: true });
+});
 
 // Маршруты для логов
 app.get('/logs/successful-calibration', LogsController.getSuccessfulCalibrationStats);
