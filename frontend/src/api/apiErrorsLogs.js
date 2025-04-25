@@ -22,6 +22,13 @@ const apiErrorsLogs = createApi({
       }),
       providesTags: ["LogsError"],
     }),
+    getErrorsAggregatedStats: builder.query({
+      query: (params) => ({
+        url: "/logs-errors/aggregated-stats",
+        params,
+      }),
+      providesTags: ["LogsError"],
+    }),
     hasUnviewedErrors: builder.query({
       query: () => ({
         url: "/logs-errors/unviewed",
@@ -41,7 +48,8 @@ const apiErrorsLogs = createApi({
 export const { 
   useGetAllLogsErrorsQuery,
   useHasUnviewedErrorsQuery,
-  useMarkAllErrorsAsViewedMutation
+  useMarkAllErrorsAsViewedMutation,
+  useGetErrorsAggregatedStatsQuery
 } = apiErrorsLogs;
 
 export default apiErrorsLogs;

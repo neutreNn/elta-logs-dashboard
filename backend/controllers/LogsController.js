@@ -237,7 +237,14 @@ export const createLogEntry = async (req, res) => {
     // Создаем записи calibration_entries
     if (Array.isArray(entries) && entries.length > 0) {
       const entriesWithSettingsId = entries.map(entry => {
-        let processedEntry = { ...entry, operator_settings_id: savedOperatorSettings._id };
+        let processedEntry = { 
+          ...entry, 
+          operator_settings_id: savedOperatorSettings._id,
+          // Добавляем нужные поля из настроек оператора
+          stand_id: operatorSettingsData.stand_id || null,
+          device_type: operatorSettingsData.device_type || null,
+          operator_name: operatorSettingsData.operator_name || null
+        };
         
         // Преобразуем start_time в объект Date
         if (entry.start_time) {
@@ -373,7 +380,10 @@ export const getSuccessfulCalibrationStats = async (req, res) => {
   try {
     const { 
       application_start_time_from, 
-      application_start_time_to 
+      application_start_time_to,
+      stand_id,
+      device_type,
+      operator_name
     } = req.query;
     
     const filter = {};
@@ -396,6 +406,10 @@ export const getSuccessfulCalibrationStats = async (req, res) => {
     
     // Добавляем условие успешной калибровки
     filter["calibration_successful"] = true;
+
+    if (stand_id) filter["stand_id"] = stand_id;
+    if (device_type) filter["device_type"] = device_type;
+    if (operator_name) filter["operator_name"] = operator_name;
 
     // Агрегация данных по дням
     const successfulCalibrationsByDay = await CalibrationEntryModel.aggregate([

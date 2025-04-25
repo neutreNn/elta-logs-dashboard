@@ -136,8 +136,180 @@ export const markAllErrorsAsViewed = async (req, res) => {
   }
 };
 
+export const getErrorsAggregatedStats = async (req, res) => {
+  try {
+    const { 
+      application_start_time_from, 
+      application_start_time_to,
+      stand_id,
+      device_type,
+      operator_name
+    } = req.query;
+    
+    const filter = {};
+    
+    // Обработка дат для фильтрации
+    if (application_start_time_from || application_start_time_to) {
+      filter["start_time"] = {};
+      
+      if (application_start_time_from) {
+        filter["start_time"].$gte = new Date(application_start_time_from);
+      }
+      
+      if (application_start_time_to) {
+        // Устанавливаем время конца дня для даты "до"
+        const dateTo = new Date(application_start_time_to);
+        dateTo.setHours(23, 59, 59, 999);
+        filter["start_time"].$lte = dateTo;
+      }
+    }
+
+    if (stand_id) filter["stand_id"] = stand_id;
+    
+    // Добавляем фильтрацию по device_type
+    if (device_type) filter["device_type"] = device_type;
+    
+    // Добавляем фильтрацию по operator_name
+    if (operator_name) filter["operator_name"] = operator_name;
+
+    // 1. Агрегация ошибок по дням
+    const errorsByDay = await ErrorLogModel.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$start_time" },
+            month: { $month: "$start_time" },
+            day: { $dayOfMonth: "$start_time" }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          date: {
+            $dateToString: {
+              format: "%Y-%m-%d",
+              date: {
+                $dateFromParts: {
+                  year: "$_id.year",
+                  month: "$_id.month",
+                  day: "$_id.day"
+                }
+              }
+            }
+          },
+          count: 1
+        }
+      },
+      { $sort: { date: 1 } }
+    ]);
+
+    // 2. Агрегация ошибок по операторам
+    const errorsByOperator = await ErrorLogModel.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: "$operator_name",
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          name: { $ifNull: ["$_id", "Неизвестно"] },
+          errors: "$count"
+        }
+      },
+      { $sort: { errors: -1 } }
+    ]);
+
+    // 3. Агрегация ошибок по стендам
+    const errorsByStand = await ErrorLogModel.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: "$stand_id",
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          name: { $ifNull: ["$_id", "Неизвестно"] },
+          errors: "$count"
+        }
+      },
+      { $sort: { errors: -1 } }
+    ]);
+
+    // 4. Агрегация ошибок по номерам ошибок
+    const errorsByNumber = await ErrorLogModel.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: "$error_number",
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          name: { 
+            $cond: [
+              { $ne: ["$_id", null] },
+              { $concat: ["№", { $toString: "$_id" }] },
+              "Неизвестно"
+            ]
+          },
+          value: "$count"
+        }
+      },
+      { $sort: { value: -1 } }
+    ]);
+
+    // 5. Агрегация ошибок по типам устройств
+    const errorsByDeviceType = await ErrorLogModel.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: "$device_type",
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          name: { $ifNull: ["$_id", "Неизвестно"] },
+          value: "$count"
+        }
+      },
+      { $sort: { value: -1 } }
+    ]);
+
+    // Подсчёт общего количества ошибок
+    const totalErrors = await ErrorLogModel.countDocuments(filter);
+    
+    // Возвращаем все данные в одном ответе
+    res.json({ 
+      errorsByDay,
+      errorsByOperator,
+      errorsByStand,
+      errorsByNumber,
+      errorsByDeviceType,
+      totalErrors
+    });
+    
+  } catch (err) {
+    console.error("Ошибка при получении агрегированной статистики ошибок:", err);
+    res.status(500).json({ message: "Ошибка при получении статистики" });
+  }
+};
+
 export const LogsErrorsController = { 
   getAllLogsErrors, 
   hasUnviewedErrors, 
-  markAllErrorsAsViewed 
+  markAllErrorsAsViewed,
+  getErrorsAggregatedStats
 };

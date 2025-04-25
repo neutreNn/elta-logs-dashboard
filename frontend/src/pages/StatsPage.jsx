@@ -31,7 +31,7 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PersonIcon from '@mui/icons-material/Person';
 import SpeedIcon from '@mui/icons-material/Speed';
-import { useGetAllLogsErrorsQuery } from '../api/apiErrorsLogs';
+import { useGetErrorsAggregatedStatsQuery } from '../api/apiErrorsLogs';
 import { useGetAllStandsQuery } from '../api/apiStands';
 import { useGetSuccessfulCalibrationQuery } from '../api/apiLogs';
 import CircleLoader from '../components/common/CircleLoader';
@@ -55,10 +55,10 @@ const chartColors = {
 // Массив цветов для диаграмм
 const COLORS = [
   chartColors.primary,
+  chartColors.error,
   chartColors.secondary,
   chartColors.success,
   chartColors.warning,
-  chartColors.error,
   chartColors.info
 ];
 
@@ -71,12 +71,15 @@ function StatsPage() {
     startMonth: new Date().getMonth(),
     startYear: new Date().getFullYear(),
     endMonth: new Date().getMonth(),
-    endYear: new Date().getFullYear()
+    endYear: new Date().getFullYear(),
+    stand: '',
+    deviceType: '',
+    operator: ''
   });
     
   // Формируем параметры для запросов с учетом фильтра по месяцам
-  const getDateRangeParams = () => {
-    const { startMonth, startYear, endMonth, endYear } = filters;
+  const getQueryParams = () => {
+    const { startMonth, startYear, endMonth, endYear, stand, deviceType, operator } = filters;
     
     // Формируем начальную дату (первый день месяца)
     const startDate = `${startYear}-${String(startMonth + 1).padStart(2, '0')}-01`;
@@ -85,21 +88,26 @@ function StatsPage() {
     const lastDay = new Date(endYear, endMonth + 1, 0).getDate();
     const endDate = `${endYear}-${String(endMonth + 1).padStart(2, '0')}-${lastDay}`;
     
-    return {
+    let params = {
+      limit: 1000,
       application_start_time_from: startDate,
       application_start_time_to: endDate
     };
+    
+    // Добавляем дополнительные параметры, если они указаны
+    if (stand) params.stand_id = stand;
+    if (deviceType) params.device_type = deviceType;
+    if (operator) params.operator_name = operator;
+    
+    return params;
   };
     
   // Получаем параметры для запросов
-  const queryParams = { 
-    limit: 1000,
-    ...getDateRangeParams()
-  };
+  const queryParams = getQueryParams();
   
   // Получение данных из Redux
-  const { data: errorsData, isLoading: isLoadingErrors } = useGetAllLogsErrorsQuery(queryParams);
-  const { data: standsData, isLoading: isLoadingStands } = useGetAllStandsQuery();
+  const { data: errorsAggregatedData, isLoading: isLoadingErrors } = useGetErrorsAggregatedStatsQuery(queryParams);
+  const { data: standsData, isLoading: isLoadingStands } = useGetAllStandsQuery({limit: 100});
   const { data: operatorsNamesData, isLoading: isLoadingOperatorsNames } = useGetOperatorNamesQuery();
   const { data: calibrationStatsData, isLoading: isLoadingCalibrationStats } = useGetSuccessfulCalibrationQuery(queryParams);
 
@@ -116,14 +124,17 @@ function StatsPage() {
     setFilters(newFilters);
   };
 
-    // Определяем, есть ли активные фильтры (не текущий месяц/год)
-    const hasActiveFilters = () => {
-      const currentDate = new Date();
-      return filters.startMonth !== currentDate.getMonth() || 
-             filters.startYear !== currentDate.getFullYear() || 
-             filters.endMonth !== currentDate.getMonth() || 
-             filters.endYear !== currentDate.getFullYear();
-    };
+  // Определяем, есть ли активные фильтры (не текущий месяц/год)
+  const hasActiveFilters = () => {
+    const currentDate = new Date();
+    return filters.startMonth !== currentDate.getMonth() || 
+           filters.startYear !== currentDate.getFullYear() || 
+           filters.endMonth !== currentDate.getMonth() || 
+           filters.endYear !== currentDate.getFullYear() ||
+           !!filters.stand || // Добавлена проверка
+           !!filters.deviceType || // Добавлена проверка
+           !!filters.operator; // Добавлена проверка
+  };
     
     // Формируем текст для отображения текущего периода фильтрации
     const getFilterPeriodText = () => {
@@ -159,156 +170,96 @@ function StatsPage() {
   });
 
   // Обработка данных при их получении
-  useEffect(() => {
-    if (errorsData?.logs && standsData?.stands && calibrationStatsData.successfulCalibrationsByDay) {
-      // Обработка ошибок по стендам
-      const standErrorsMap = {};
-      errorsData.logs.forEach(log => {
-        if (log.stand_id) {
-          standErrorsMap[log.stand_id] = (standErrorsMap[log.stand_id] || 0) + 1;
-        }
-      });
+  // Обработка данных при их получении
+useEffect(() => {
+  if (errorsAggregatedData && standsData?.stands && calibrationStatsData?.successfulCalibrationsByDay) {
+    // Используем готовые данные из API вместо их обработки
+    setErrorsByStand(errorsAggregatedData.errorsByStand);
+    setErrorsByOperator(errorsAggregatedData.errorsByOperator);
+    setErrorsByDeviceType(errorsAggregatedData.errorsByDeviceType);
+    setErrorsByNumber(errorsAggregatedData.errorsByNumber);
+    setTopStandsWithErrors(errorsAggregatedData.errorsByStand.slice(0, 5));
+    
+    // Обработка успешных калибровок по дням
+    const calibrationsByDay = {};
+    
+    // Получаем даты начала и конца из фильтров
+    const startDate = new Date(filters.startYear, filters.startMonth, 1);
+    const endDate = new Date(filters.endYear, filters.endMonth + 1, 0); // последний день месяца
 
-      const standErrorsArray = Object.entries(standErrorsMap).map(([standId, count]) => ({
-        name: standId,
-        errors: count
-      })).sort((a, b) => b.errors - a.errors);
-
-      setErrorsByStand(standErrorsArray);
-      setTopStandsWithErrors(standErrorsArray.slice(0, 5));
-
-      // Обработка ошибок по операторам
-      const operatorErrorsMap = {};
-      errorsData.logs.forEach(log => {
-        if (log.operator_name) {
-          operatorErrorsMap[log.operator_name] = (operatorErrorsMap[log.operator_name] || 0) + 1;
-        }
-      });
-
-      const operatorErrorsArray = Object.entries(operatorErrorsMap).map(([operator, count]) => ({
-        name: operator,
-        errors: count
-      })).sort((a, b) => b.errors - a.errors);
-
-      setErrorsByOperator(operatorErrorsArray);
-
-      // Обработка ошибок по типам устройств
-      const deviceTypeErrorsMap = {};
-      errorsData.logs.forEach(log => {
-        if (log.device_type) {
-          deviceTypeErrorsMap[log.device_type] = (deviceTypeErrorsMap[log.device_type] || 0) + 1;
-        } else {
-          deviceTypeErrorsMap['Неизвестно'] = (deviceTypeErrorsMap['Неизвестно'] || 0) + 1;
-        }
-      });
-
-      const deviceTypeErrorsArray = Object.entries(deviceTypeErrorsMap).map(([type, count]) => ({
-        name: type,
-        value: count
-      }));
-
-      setErrorsByDeviceType(deviceTypeErrorsArray);
-
-      const errorNumberMap = {};
-      errorsData.logs.forEach(log => {
-        if (log.error_number !== undefined) {
-          const errorKey = `№${log.error_number}`;
-          errorNumberMap[errorKey] = (errorNumberMap[errorKey] || 0) + 1;
-        } else {
-          errorNumberMap['Неизвестно'] = (errorNumberMap['Неизвестно'] || 0) + 1;
-        }
-      });
-
-      const errorNumberArray = Object.entries(errorNumberMap).map(([errorNum, count]) => ({
-        name: errorNum,
-        value: count
-      })).sort((a, b) => b.value - a.value);
-
-      // После setErrorsByDeviceType добавьте:
-      setErrorsByNumber(errorNumberArray);
-
-      // Обработка тренда ошибок по дням (реальные данные)
-      const errorsByDay = {};
-
-      // Обработка успешных калибровок по дням
-      const calibrationsByDay = {};
+    // Инициализируем все дни нулевыми значениями для успешных калибровок
+    const currentDateSuccess = new Date(startDate);
+    while (currentDateSuccess <= endDate) {
+      const dateKey = currentDateSuccess.toISOString().split('T')[0]; // формат YYYY-MM-DD
+      calibrationsByDay[dateKey] = 0;
+      currentDateSuccess.setDate(currentDateSuccess.getDate() + 1);
+    }
       
-      // Получаем даты начала и конца из фильтров
-      const startDate = new Date(filters.startYear, filters.startMonth, 1);
-      const endDate = new Date(filters.endYear, filters.endMonth + 1, 0); // последний день месяца
-
-      // Инициализируем все дни нулевыми значениями
-      const currentDateSuccess = new Date(startDate);
-      while (currentDateSuccess <= endDate) {
-        const dateKey = currentDateSuccess.toISOString().split('T')[0]; // формат YYYY-MM-DD
-        calibrationsByDay[dateKey] = 0;
-        currentDateSuccess.setDate(currentDateSuccess.getDate() + 1);
-      }
-      
-      // Инициализируем все дни нулевыми значениями
-      const currentDateError = new Date(startDate);
-      while (currentDateError <= endDate) {
-        const dateKey = currentDateError.toISOString().split('T')[0]; // формат YYYY-MM-DD
-        errorsByDay[dateKey] = 0;
-        currentDateError.setDate(currentDateError.getDate() + 1);
-      }
-
-      // Подсчитываем успешные случаи по дням
+    // Подсчитываем успешные случаи по дням
+    if (calibrationStatsData.successfulCalibrationsByDay && Array.isArray(calibrationStatsData.successfulCalibrationsByDay)) {
       calibrationStatsData.successfulCalibrationsByDay.forEach(item => {
         calibrationsByDay[item.date] = item.count;
       });
+    }
 
-      // Преобразуем в массив для графика
-      const calibrationTrendData = Object.entries(calibrationsByDay).map(([date, count]) => {
-        const formatDate = new Date(date);
-        return {
-          name: formatDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }),
-          fullDate: formatDate,
-          successful: count
-        };
-      }).sort((a, b) => a.fullDate - b.fullDate); // сортируем по дате
+    // Преобразуем в массив для графика успешных калибровок
+    const calibrationTrendData = Object.entries(calibrationsByDay).map(([date, count]) => {
+      const formatDate = new Date(date);
+      return {
+        name: formatDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }),
+        fullDate: formatDate,
+        successful: count
+      };
+    }).sort((a, b) => a.fullDate - b.fullDate); // сортируем по дате
 
-      setCalibrationTrends(calibrationTrendData);
+    setCalibrationTrends(calibrationTrendData);
       
-      // Подсчитываем ошибки по дням
-      errorsData.logs.forEach(log => {
-        if (log.start_time) {
-          const logDate = new Date(log.start_time);
-          const dateKey = logDate.toISOString().split('T')[0];
-          if (errorsByDay[dateKey] !== undefined) {
-            errorsByDay[dateKey]++;
-          }
-        }
-      });
-      
-      // Преобразуем в массив для графика
-      const trendData = Object.entries(errorsByDay).map(([date, count]) => {
-        const formatDate = new Date(date);
-        return {
-          name: formatDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }),
-          fullDate: formatDate,
-          errors: count
-        };
-      }).sort((a, b) => a.fullDate - b.fullDate); // сортируем по дате
-      
-      setErrorTrends(trendData);
-
-      // Обработка общей статистики
-      const activeStands = standsData.stands.filter(stand => stand.status === 'активен').length;
-      const standsInMaintenance = standsData.stands.filter(stand => 
-        stand.status === 'в ремонте' || stand.status === 'требует обслуживания'
-      ).length;
-
-      setTotalStats({
-        totalSuccess: calibrationStatsData.totalSuccess || 0,
-        totalErrors: errorsData.total || 0,
-        totalStands: standsData.total || 0,
-        totalOperators: operatorsNamesData.length,
-        activeStands,
-        standsInMaintenance
+    // Обработка тренда ошибок по дням
+    const errorsByDay = {};
+    
+    // Инициализируем все дни нулевыми значениями для ошибок
+    const currentDateError = new Date(startDate);
+    while (currentDateError <= endDate) {
+      const dateKey = currentDateError.toISOString().split('T')[0]; // формат YYYY-MM-DD
+      errorsByDay[dateKey] = 0;
+      currentDateError.setDate(currentDateError.getDate() + 1);
+    }
+    
+    // Заполняем данные из API для ошибок
+    if (errorsAggregatedData.errorsByDay && Array.isArray(errorsAggregatedData.errorsByDay)) {
+      errorsAggregatedData.errorsByDay.forEach(item => {
+        errorsByDay[item.date] = item.count;
       });
     }
-  }, [errorsData, standsData, operatorsNamesData, calibrationStatsData, filters]);
+    
+    // Преобразуем в массив для графика ошибок
+    const trendData = Object.entries(errorsByDay).map(([date, count]) => {
+      const formatDate = new Date(date);
+      return {
+        name: formatDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }),
+        fullDate: formatDate,
+        errors: count
+      };
+    }).sort((a, b) => a.fullDate - b.fullDate); // сортируем по дате
+    
+    setErrorTrends(trendData);
+
+    // Обработка общей статистики
+    const activeStands = standsData.stands.filter(stand => stand.status === 'активен').length;
+    const standsInMaintenance = standsData.stands.filter(stand => 
+      stand.status === 'в ремонте' || stand.status === 'требует обслуживания'
+    ).length;
+
+    setTotalStats({
+      totalSuccess: calibrationStatsData.totalSuccess || 0,
+      totalErrors: errorsAggregatedData.totalErrors || 0,
+      totalStands: standsData.total || 0,
+      totalOperators: operatorsNamesData?.length || 0,
+      activeStands,
+      standsInMaintenance
+    });
+  }
+}, [errorsAggregatedData, standsData, operatorsNamesData, calibrationStatsData, filters]);
 
   if (isLoadingErrors || isLoadingStands || isLoadingOperatorsNames || isLoadingCalibrationStats) {
     return (
@@ -321,10 +272,18 @@ function StatsPage() {
   return (
     <Box sx={{ padding: 3, bgcolor: '#f5f5f7', width: '100%' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', mb: 1 }}>
           <Typography variant="subtitle1" color="textSecondary">
             Период: {getFilterPeriodText()}
           </Typography>
+          {(filters.stand || filters.deviceType || filters.operator) && (
+            <Typography variant="subtitle1" color="textSecondary">
+              Фильтры: 
+              {filters.stand && ` Стенд - ${filters.stand}`}
+              {filters.deviceType && ` Тип устройства - ${filters.deviceType}`}
+              {filters.operator && ` Оператор - ${filters.operator}`}
+            </Typography>
+          )}
         </Box>
         <Button
           variant="outlined"
@@ -613,7 +572,7 @@ function StatsPage() {
           </Paper>
         </Grid>
 
-        {/* Распределение ошибок по номеру ошибки (круговая диаграмма) */}
+        {/* Распределение ошибок по номеру ошибки (вертикальный столбчатый график) */}
         <Grid item xs={12} md={6}>
           <Paper 
             elevation={2} 
@@ -630,22 +589,26 @@ function StatsPage() {
             <Typography variant="h6" gutterBottom>
               Распределение ошибок по номеру
             </Typography>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Количество ошибок по их номеру
+            </Typography>
             <ResponsiveContainer width="100%" height="85%">
-              <PieChart>
-                <Pie
-                  data={errorsByNumber}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {errorsByNumber.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
+              <BarChart
+                data={errorsByNumber}
+                margin={{ top: 10, right: 30, left: 0, bottom: 30 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.text.secondary, 0.2)} />
+                <XAxis 
+                  dataKey="name"
+                  tick={{ fill: theme.palette.text.secondary, fontSize: 11 }}
+                  interval={0}
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis 
+                  tick={{ fill: theme.palette.text.secondary }} 
+                />
                 <Tooltip 
                   formatter={(value) => [`${value} ошибок`, 'Количество']}
                   contentStyle={{ 
@@ -654,7 +617,17 @@ function StatsPage() {
                     borderRadius: 4
                   }}
                 />
-              </PieChart>
+                <Bar 
+                  dataKey="value" 
+                  name="Количество ошибок" 
+                  fill={chartColors.error}
+                  radius={[4, 4, 0, 0]}
+                >
+                  {errorsByNumber.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={chartColors.error} />
+                  ))}
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </Paper>
         </Grid>
@@ -765,7 +738,7 @@ function StatsPage() {
                 <Bar 
                   dataKey="errors" 
                   name="Количество ошибок" 
-                  fill={chartColors.secondary}
+                  fill={chartColors.error}
                   radius={[0, 4, 4, 0]}
                 />
               </BarChart>

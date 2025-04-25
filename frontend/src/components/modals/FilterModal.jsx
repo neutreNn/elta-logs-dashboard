@@ -190,6 +190,15 @@ function FilterModal({ open, handleClose, applyFilters }) {
                 size="small"
                 variant="outlined"
                 disabled={isLoadingIds}
+                SelectProps={{
+                  MenuProps: {
+                    PaperProps: {
+                      style: {
+                        maxHeight: 200, // высота в пикселях, можно изменить по вкусу
+                      },
+                    },
+                  },
+                }}
               >
                 <MenuItem value=""><em>Не выбрано</em></MenuItem>
                 {standIds.map((name, index) => (

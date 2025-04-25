@@ -40,12 +40,13 @@ app.post('/auth/validate', checkAuth, (req, res) => {
 app.get('/logs/successful-calibration', checkAuth, LogsController.getSuccessfulCalibrationStats);
 app.get('/logs', checkAuth, LogsController.getAllOperatorSettings);
 app.get('/logs/:id', checkAuth, LogsController.getOneOperatorSettings);
-app.post('/logs', checkAuth, LogsController.createLogEntry);
+app.post('/logs', LogsController.createLogEntry);
 app.delete('/logs/:id', checkAuth, LogsController.removeLogEntry);
 app.get('/logs/:id/calibration-entries', checkAuth, LogsController.getCalibrationEntriesByOperatorId);
 
 // Маршруты для ошибок
 app.get('/logs-errors', checkAuth, LogsErrorsController.getAllLogsErrors);
+app.get('/logs-errors/aggregated-stats', checkAuth, LogsErrorsController.getErrorsAggregatedStats);
 app.get('/logs-errors/unviewed', checkAuth, LogsErrorsController.hasUnviewedErrors);
 app.put('/logs-errors/mark-viewed', checkAuth, LogsErrorsController.markAllErrorsAsViewed);
 
