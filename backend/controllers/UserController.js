@@ -1,8 +1,14 @@
 ﻿import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 import UserSchema from '../models/UserSchema.js'
 import { validationResult } from 'express-validator';
+
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const jwtSecret = process.env.JWT_SECRET;
 
 export const register = async (req, res) => {
     try {
@@ -26,7 +32,7 @@ export const register = async (req, res) => {
             {
                 _id: user._id,
             },
-            'secret123',
+            jwtSecret,
             {
                 expiresIn: '30d',
             },
@@ -69,7 +75,7 @@ export const login = async (req, res) => {
             {
                 _id: user._id,
             },
-            'secret123',
+            jwtSecret,
             {
                 expiresIn: '30d',
             },

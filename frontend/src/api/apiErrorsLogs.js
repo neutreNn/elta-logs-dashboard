@@ -1,4 +1,3 @@
-// apiErrorsLogs.js
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 const apiErrorsLogs = createApi({

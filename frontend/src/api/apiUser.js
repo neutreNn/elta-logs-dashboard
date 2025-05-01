@@ -3,7 +3,7 @@
 const apiUser = createApi({
   reducerPath: 'apiUser',
   baseQuery: fetchBaseQuery({
-    baseUrl: 'http://localhost:4444',
+    baseUrl: "http://localhost:4444",
     prepareHeaders: (headers) => {
       const token = localStorage.getItem('token');
       if (token) {

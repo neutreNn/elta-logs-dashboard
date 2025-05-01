@@ -15,7 +15,7 @@ import { UserController } from './controllers/UserController.js';
 
 dotenv.config();
 
-mongoose.connect('mongodb+srv://qwerty:qwerty123@cluster0.qlftfsl.mongodb.net/mydatabase?retryWrites=true&w=majority&appName=Cluster0')
+mongoose.connect(process.env.MONGO_URL)
 .then(() => {
     console.log('DB ok');
 })
