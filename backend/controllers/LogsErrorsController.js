@@ -143,7 +143,9 @@ export const getErrorsAggregatedStats = async (req, res) => {
       application_start_time_to,
       stand_id,
       device_type,
-      operator_name
+      operator_name,
+      device_firmware_version_min,
+      device_firmware_version_max
     } = req.query;
     
     const filter = {};
@@ -171,6 +173,19 @@ export const getErrorsAggregatedStats = async (req, res) => {
     
     // Добавляем фильтрацию по operator_name
     if (operator_name) filter["operator_name"] = operator_name;
+    
+    // Фильтрация по device_firmware_version_min и device_firmware_version_max
+    if (device_firmware_version_min || device_firmware_version_max) {
+      const minVersion = device_firmware_version_min ? parseVersion(device_firmware_version_min) : null;
+      const maxVersion = device_firmware_version_max ? parseVersion(device_firmware_version_max) : null;
+
+      filter["device_firmware_version_parsed"] = {
+          $exists: true,
+      };
+
+      if (minVersion) filter["device_firmware_version_parsed"]['$gte'] = minVersion;
+      if (maxVersion) filter["device_firmware_version_parsed"]['$lte'] = maxVersion;
+    }
 
     // 1. Агрегация ошибок по дням
     const errorsByDay = await ErrorLogModel.aggregate([

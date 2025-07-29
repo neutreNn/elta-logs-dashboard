@@ -27,7 +27,6 @@ function LogsErrorsPage() {
   const [markAllAsViewed] = useMarkAllErrorsAsViewedMutation();
 
   useEffect(() => {
-    // Вызываем API для отметки всех ошибок как просмотренных
     markAllAsViewed().unwrap()
       .then(() => {
         console.log('Все ошибки отмечены как просмотренные');

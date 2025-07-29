@@ -9,10 +9,6 @@ import {
   Grid,
   Typography,
   Divider,
-  Box,
-  FormControl,
-  InputLabel,
-  Select,
   MenuItem,
   TextField
 } from '@mui/material';
@@ -24,7 +20,6 @@ import { format } from 'date-fns';
 import { useGetOperatorNamesQuery } from '../../api/apiOperators';
 import { useGetStandIdsQuery } from '../../api/apiStandIds';
 
-// Константа для типов устройств
 const DEVICE_TYPES = [
   { id: null, name: '*Не выбрано*' },
   { id: 'online', name: 'Онлайн' },
@@ -36,7 +31,6 @@ const FilterStatsModal = ({ open, onClose, onApply, currentFilters }) => {
   const { data: operatorNames = [], isLoadingOperators } = useGetOperatorNamesQuery();
   const { data: standIds = [], isLoadingIds } = useGetStandIdsQuery();
   
-  // Измененное состояние для фильтров - только один выбор
   const [filters, setFilters] = useState({
     dateRange: {
       startDate: null,
@@ -44,18 +38,15 @@ const FilterStatsModal = ({ open, onClose, onApply, currentFilters }) => {
     },
     selectedStand: '',
     selectedDeviceType: '',
-    selectedOperator: ''
+    selectedOperator: '',
+    device_firmware_version_min: '',
+    device_firmware_version_max: ''
   });
   
-  // Инициализация фильтров при открытии модального окна
   useEffect(() => {
     if (open && currentFilters) {
-      // Преобразуем месяц и год в объекты даты
       const startDate = new Date(currentFilters.startYear, currentFilters.startMonth, 1);
-      
-      // Для конечной даты берем последний день месяца
       const endDate = new Date(currentFilters.endYear, currentFilters.endMonth + 1, 0);
-      
       setFilters({
         dateRange: {
           startDate,
@@ -63,12 +54,13 @@ const FilterStatsModal = ({ open, onClose, onApply, currentFilters }) => {
         },
         selectedStand: currentFilters.stand || '',
         selectedDeviceType: currentFilters.deviceType || '',
-        selectedOperator: currentFilters.operator || ''
+        selectedOperator: currentFilters.operator || '',
+        device_firmware_version_min: currentFilters.device_firmware_version_min || '',
+        device_firmware_version_max: currentFilters.device_firmware_version_max || ''
       });
     }
   }, [open, currentFilters]);
 
-  // Обработчики изменения значений дат
   const handleStartDateChange = (date) => {
     setFilters({
       ...filters,
@@ -89,7 +81,6 @@ const FilterStatsModal = ({ open, onClose, onApply, currentFilters }) => {
     });
   };
 
-  // Обработчик изменения для выпадающих списков с одним выбором
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFilters({
@@ -98,11 +89,9 @@ const FilterStatsModal = ({ open, onClose, onApply, currentFilters }) => {
     });
   };
 
-  // Применение фильтров
   const handleApply = () => {
     if (!isValidRange()) return;
     
-    // Преобразуем выбранные даты обратно в формат месяц/год для совместимости
     const startMonth = filters.dateRange.startDate.getMonth();
     const startYear = filters.dateRange.startDate.getFullYear();
     const endMonth = filters.dateRange.endDate.getMonth();
@@ -115,13 +104,14 @@ const FilterStatsModal = ({ open, onClose, onApply, currentFilters }) => {
       endYear,
       stand: filters.selectedStand,
       deviceType: filters.selectedDeviceType,
-      operator: filters.selectedOperator
+      operator: filters.selectedOperator,
+      device_firmware_version_min: filters.device_firmware_version_min,
+      device_firmware_version_max: filters.device_firmware_version_max
     });
     
     onClose();
   };
 
-  // Сброс фильтров
   const handleReset = () => {
     const currentDate = new Date();
     setFilters({
@@ -131,17 +121,17 @@ const FilterStatsModal = ({ open, onClose, onApply, currentFilters }) => {
       },
       selectedStand: '',
       selectedDeviceType: '',
-      selectedOperator: ''
+      selectedOperator: '',
+      device_firmware_version_min: '',
+      device_firmware_version_max: ''
     });
   };
 
-  // Проверка валидности диапазона дат
   const isValidRange = () => {
     if (!filters.dateRange.startDate || !filters.dateRange.endDate) return false;
     return filters.dateRange.startDate <= filters.dateRange.endDate;
   };
 
-  // Форматирование дат для отображения
   const formatDateDisplay = (date) => {
     if (!date) return "";
     return format(date, 'LLLL yyyy', { locale: ru });
@@ -157,7 +147,6 @@ const FilterStatsModal = ({ open, onClose, onApply, currentFilters }) => {
       <Divider />
       <DialogContent sx={{ pt: 2 }}>
         <Grid container spacing={2}>
-          {/* Период дат - более компактное отображение */}
           <Grid item xs={12}>
             <Typography variant="subtitle1" gutterBottom>
               Период
@@ -232,7 +221,7 @@ const FilterStatsModal = ({ open, onClose, onApply, currentFilters }) => {
                   MenuProps: {
                     PaperProps: {
                       style: {
-                        maxHeight: 250, // высота в пикселях
+                        maxHeight: 250,
                       },
                     },
                   },
@@ -284,6 +273,32 @@ const FilterStatsModal = ({ open, onClose, onApply, currentFilters }) => {
                   <MenuItem key={index} value={name}>{name}</MenuItem>
                 ))}
               </TextField>
+            </Grid>
+            
+            {/* Версии прошивки */}
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Минимальная версия прошивки"
+                name="device_firmware_version_min"
+                value={filters.device_firmware_version_min}
+                onChange={handleInputChange}
+                placeholder="Например: 4.5.1"
+                fullWidth
+                size="small"
+                variant="outlined"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Максимальная версия прошивки"
+                name="device_firmware_version_max"
+                value={filters.device_firmware_version_max}
+                onChange={handleInputChange}
+                placeholder="Например: 5.0.0"
+                fullWidth
+                size="small"
+                variant="outlined"
+              />
             </Grid>
           </Grid>
         </Grid>

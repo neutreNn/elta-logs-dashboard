@@ -50,7 +50,6 @@ export const getAllOperatorSettings = async (req, res) => {
       if (maxVersion) filter["device_firmware_version_parsed"]['$lte'] = maxVersion;
     }
 
-    // Обработка дат для фильтрации
     if (application_start_time_from || application_start_time_to) {
       filter["application_start_time"] = {};
       
@@ -61,7 +60,6 @@ export const getAllOperatorSettings = async (req, res) => {
       
       if (application_start_time_to) {
         filter["application_start_time"] = filter["application_start_time"] || {};
-        // Устанавливаем время конца дня для даты "до"
         const dateTo = new Date(application_start_time_to);
         dateTo.setHours(23, 59, 59, 999);
         filter["application_start_time"].$lte = dateTo;
@@ -70,14 +68,12 @@ export const getAllOperatorSettings = async (req, res) => {
 
     console.log("Формируемый фильтр запроса:", filter);
 
-    // Получаем настройки операторов с применением фильтров
     const operatorSettings = await OperatorSettingsModel.find(filter)
       .sort(sort)
       .skip((page - 1) * limit)
       .limit(Number(limit))
       .exec();
     
-    // Получаем количество ошибок и общее количество записей для каждого оператора
     const enrichedOperatorSettings = await Promise.all(operatorSettings.map(async (os) => {
       const entriesCount = await CalibrationEntryModel.countDocuments({ 
         operator_settings_id: os._id 
@@ -109,7 +105,6 @@ export const getAllOperatorSettings = async (req, res) => {
   }
 };
 
-// Получение одной настройки оператора по ID
 export const getOneOperatorSettings = async (req, res) => {
   try {
     const operatorSettings = await OperatorSettingsModel.findById(req.params.id);
@@ -139,19 +134,16 @@ export const getOneOperatorSettings = async (req, res) => {
   }
 };
 
-// Получение калибровочных записей для конкретного оператора с пагинацией
 export const getCalibrationEntriesByOperatorId = async (req, res) => {
   try {
     const operatorId = req.params.id;
     const { page = 1, limit = 20 } = req.query;
     
-    // Проверяем существование оператора
     const operatorSettings = await OperatorSettingsModel.findById(operatorId);
     if (!operatorSettings) {
       return res.status(404).json({ message: "Настройки оператора не найдены" });
     }
     
-    // Получаем записи с пагинацией
     const entries = await CalibrationEntryModel.find({ operator_settings_id: operatorId })
       .sort('start_time')
       .skip((page - 1) * limit)
@@ -172,15 +164,12 @@ export const getCalibrationEntriesByOperatorId = async (req, res) => {
   }
 };
 
-// Создание новой записи (оператор + калибровочные данные)
 export const createLogEntry = async (req, res) => {
   try {
     console.log("Полученные данные:", req.body);
     
-    // 1. Создаем OperatorSettings
     const operatorSettingsData = req.body.operator_settings || {};
 
-    // Преобразование строковой даты в объект Date
     if (operatorSettingsData.application_start_time) {
       const [datePart, timePart] = operatorSettingsData.application_start_time.split(' ');
       const [day, month, year] = datePart.split('.');
@@ -188,7 +177,7 @@ export const createLogEntry = async (req, res) => {
       
       operatorSettingsData.application_start_time = new Date(
         parseInt(year), 
-        parseInt(month) - 1, // месяцы в JavaScript начинаются с 0
+        parseInt(month) - 1,
         parseInt(day),
         parseInt(hours),
         parseInt(minutes),
@@ -196,7 +185,6 @@ export const createLogEntry = async (req, res) => {
       );
     }
     
-    // Парсим прошивку
     if (operatorSettingsData.device_firmware_version) {
       operatorSettingsData.device_firmware_version_parsed = parseVersion(operatorSettingsData.device_firmware_version);
     }
@@ -204,7 +192,6 @@ export const createLogEntry = async (req, res) => {
     const operatorSettings = new OperatorSettingsModel(operatorSettingsData);
     const savedOperatorSettings = await operatorSettings.save();
     
-    // Проверяем и добавляем оператора в список операторов, если он новый
     const operatorName = operatorSettingsData.operator_name?.trim();
     if (operatorName) {
       const exists = await OperatorNameModel.findOne({ name: operatorName });
@@ -231,22 +218,19 @@ export const createLogEntry = async (req, res) => {
       }
     }
     
-    // 2. Обрабатываем calibration_entries
     const entries = req.body.calibration_entries || [];
     
-    // Создаем записи calibration_entries
     if (Array.isArray(entries) && entries.length > 0) {
       const entriesWithSettingsId = entries.map(entry => {
         let processedEntry = { 
           ...entry, 
           operator_settings_id: savedOperatorSettings._id,
-          // Добавляем нужные поля из настроек оператора
           stand_id: operatorSettingsData.stand_id || null,
           device_type: operatorSettingsData.device_type || null,
-          operator_name: operatorSettingsData.operator_name || null
+          operator_name: operatorSettingsData.operator_name || null,
+          device_firmware_version_parsed: operatorSettingsData.device_firmware_version_parsed || null,
         };
         
-        // Преобразуем start_time в объект Date
         if (entry.start_time) {
           const [datePart, timePart] = entry.start_time.split(' ');
           const [day, month, year] = datePart.split('.');
@@ -265,19 +249,15 @@ export const createLogEntry = async (req, res) => {
         return processedEntry;
       });
       
-      // Проверяем наличие ошибок
       const hasErrors = entries.some(entry => entry.error_detected === true);
       
-      // Создаем записи в базе
       await CalibrationEntryModel.insertMany(entriesWithSettingsId);
       
-      // Если есть ошибки, создаем записи в ErrorLog
       if (hasErrors) {
         console.log("Найдено логов с ошибками:", entries.filter(e => e.error_detected).length);
         
         const entriesWithError = entries.filter(entry => entry.error_detected === true);
         
-        // Формируем данные для ErrorLog
         const errorLogData = entriesWithError.map(entry => {
           const errorData = {
             parent_log_id: savedOperatorSettings._id,
@@ -294,7 +274,6 @@ export const createLogEntry = async (req, res) => {
             device_firmware_version_parsed: operatorSettingsData.device_firmware_version_parsed ?? [],
           };
           
-          // Преобразуем start_time в объект Date
           if (entry.start_time) {
             const [datePart, timePart] = entry.start_time.split(' ');
             const [day, month, year] = datePart.split('.');
@@ -318,10 +297,8 @@ export const createLogEntry = async (req, res) => {
       }
     }
     
-    // Обновление данных стенда, если есть stand_id
     if (operatorSettingsData.stand_id) {
       try {
-        // Изменяем формат данных для соответствия ожиданиям StandsController
         const modifiedData = {
           operator_settings: operatorSettingsData,
           calibration_entries: entries
@@ -332,11 +309,9 @@ export const createLogEntry = async (req, res) => {
       }
     }
     
-    // Подсчитываем количество записей и ошибок для ответа
     const entriesCount = entries.length;
     const hasErrors = entries.some(entry => entry.error_detected === true);
     
-    // Возвращаем результат
     const result = {
       ...savedOperatorSettings.toObject(),
       entriesCount,
@@ -350,7 +325,6 @@ export const createLogEntry = async (req, res) => {
   }
 };
 
-// Удаление записи и всех связанных данных
 export const removeLogEntry = async (req, res) => {
   try {
     const operatorId = req.params.id;
@@ -360,13 +334,8 @@ export const removeLogEntry = async (req, res) => {
       return res.status(404).json({ message: "Настройки оператора не найдены" });
     }
     
-    // Удаляем связанные calibration_entries
     await CalibrationEntryModel.deleteMany({ operator_settings_id: operatorId });
-    
-    // Удаляем связанные error logs
     await ErrorLogModel.deleteMany({ operator_settings_id: operatorId });
-    
-    // Удаляем operatorSettings
     await OperatorSettingsModel.findByIdAndDelete(operatorId);
     
     res.json({ message: "Лог и связанные данные удалены" });
@@ -383,12 +352,13 @@ export const getSuccessfulCalibrationStats = async (req, res) => {
       application_start_time_to,
       stand_id,
       device_type,
-      operator_name
+      operator_name,
+      device_firmware_version_min,
+      device_firmware_version_max
     } = req.query;
     
     const filter = {};
     
-    // Обработка дат для фильтрации
     if (application_start_time_from || application_start_time_to) {
       filter["start_time"] = {};
       
@@ -397,21 +367,30 @@ export const getSuccessfulCalibrationStats = async (req, res) => {
       }
       
       if (application_start_time_to) {
-        // Устанавливаем время конца дня для даты "до"
         const dateTo = new Date(application_start_time_to);
         dateTo.setHours(23, 59, 59, 999);
         filter["start_time"].$lte = dateTo;
       }
     }
     
-    // Добавляем условие успешной калибровки
     filter["calibration_successful"] = true;
 
     if (stand_id) filter["stand_id"] = stand_id;
     if (device_type) filter["device_type"] = device_type;
     if (operator_name) filter["operator_name"] = operator_name;
 
-    // Агрегация данных по дням
+    if (device_firmware_version_min || device_firmware_version_max) {
+      const minVersion = device_firmware_version_min ? parseVersion(device_firmware_version_min) : null;
+      const maxVersion = device_firmware_version_max ? parseVersion(device_firmware_version_max) : null;
+
+      filter["device_firmware_version_parsed"] = {
+          $exists: true,
+      };
+
+      if (minVersion) filter["device_firmware_version_parsed"]['$gte'] = minVersion;
+      if (maxVersion) filter["device_firmware_version_parsed"]['$lte'] = maxVersion;
+    }
+
     const successfulCalibrationsByDay = await CalibrationEntryModel.aggregate([
       { $match: filter },
       {
@@ -445,7 +424,6 @@ export const getSuccessfulCalibrationStats = async (req, res) => {
       { $sort: { date: 1 } }
     ]);
 
-    // Подсчёт общего количества
     const totalSuccess = successfulCalibrationsByDay.reduce((sum, entry) => sum + entry.count, 0);
     
     res.json({ 

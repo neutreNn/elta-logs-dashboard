@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 const apiLogs = createApi({
   reducerPath: "apiLogs",
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:4444",
+    baseUrl: "http://172.68.35.171:5000",
     prepareHeaders: (headers) => {
       const token = localStorage.getItem("token");
       if (token) {
@@ -14,7 +14,6 @@ const apiLogs = createApi({
   }),
   tagTypes: ["Operators", "CalibrationEntries"],
   endpoints: (builder) => ({
-    // Получение всех настроек операторов с фильтрацией и пагинацией
     getAllOperators: builder.query({
       query: (params) => ({
         url: "/logs",
@@ -22,14 +21,10 @@ const apiLogs = createApi({
       }),
       providesTags: ["Operators"],
     }),
-    
-    // Получение конкретной настройки оператора по ID
     getOperatorById: builder.query({
       query: (id) => `/logs/${id}`,
       providesTags: (result, error, id) => [{ type: "Operators", id }],
     }),
-    
-    // Получение калибровочных записей для оператора с пагинацией
     getCalibrationEntriesByOperatorId: builder.query({
       query: ({ operatorId, page, limit }) => ({
         url: `/logs/${operatorId}/calibration-entries`,
@@ -40,8 +35,6 @@ const apiLogs = createApi({
         "CalibrationEntries",
       ],
     }),
-    
-    // Создание новой записи лога (настройки оператора + калибровочные данные)
     createLogEntry: builder.mutation({
       query: (data) => ({
         url: "/logs",
@@ -50,8 +43,6 @@ const apiLogs = createApi({
       }),
       invalidatesTags: ["Operators", "CalibrationEntries"],
     }),
-    
-    // Удаление записи лога и всех связанных данных
     removeLogEntry: builder.mutation({
       query: (id) => ({
         url: `/logs/${id}`,
@@ -64,7 +55,6 @@ const apiLogs = createApi({
         "CalibrationEntries"
       ],
     }),
-
     getSuccessfulCalibration: builder.query({
       query: (params) => ({
         url: "/logs/successful-calibration",

@@ -13,6 +13,7 @@ function Header() {
     '/analytics': 'Аналитика',
     '/errors': 'Ошибки',
     '/stands': 'Стенды',
+    '/firmware': 'Прошивки',
     '/stats': 'Статистика',
   };
 

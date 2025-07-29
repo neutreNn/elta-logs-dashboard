@@ -41,7 +41,6 @@ import FilterStatsModal from '../components/modals/FilterStatsModal';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { useGetOperatorNamesQuery } from '../api/apiOperators';
 
-// Кастомные цвета для графиков
 const chartColors = {
   primary: '#3f51b5',
   secondary: '#f50057',
@@ -52,7 +51,6 @@ const chartColors = {
   grey: '#9e9e9e'
 };
 
-// Массив цветов для диаграмм
 const COLORS = [
   chartColors.primary,
   chartColors.error,
@@ -65,7 +63,6 @@ const COLORS = [
 function StatsPage() {
   const theme = useTheme();
 
-  // Добавляем новые состояния
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [filters, setFilters] = useState({
     startMonth: new Date().getMonth(),
@@ -74,44 +71,49 @@ function StatsPage() {
     endYear: new Date().getFullYear(),
     stand: '',
     deviceType: '',
-    operator: ''
+    operator: '',
+    device_firmware_version_min: '',
+    device_firmware_version_max: '',
   });
-    
-  // Формируем параметры для запросов с учетом фильтра по месяцам
+
   const getQueryParams = () => {
-    const { startMonth, startYear, endMonth, endYear, stand, deviceType, operator } = filters;
+    const { 
+      startMonth, 
+      startYear, 
+      endMonth, 
+      endYear, 
+      stand, 
+      deviceType, 
+      operator, 
+      device_firmware_version_min, 
+      device_firmware_version_max 
+    } = filters;
     
-    // Формируем начальную дату (первый день месяца)
     const startDate = `${startYear}-${String(startMonth + 1).padStart(2, '0')}-01`;
-    
-    // Формируем конечную дату (последний день месяца)
+
     const lastDay = new Date(endYear, endMonth + 1, 0).getDate();
     const endDate = `${endYear}-${String(endMonth + 1).padStart(2, '0')}-${lastDay}`;
     
     let params = {
-      limit: 1000,
       application_start_time_from: startDate,
       application_start_time_to: endDate
     };
     
-    // Добавляем дополнительные параметры, если они указаны
     if (stand) params.stand_id = stand;
     if (deviceType) params.device_type = deviceType;
     if (operator) params.operator_name = operator;
+    if (device_firmware_version_min) params.device_firmware_version_min = device_firmware_version_min;
+    if (device_firmware_version_max) params.device_firmware_version_max = device_firmware_version_max;
     
     return params;
   };
-    
-  // Получаем параметры для запросов
+
   const queryParams = getQueryParams();
-  
-  // Получение данных из Redux
   const { data: errorsAggregatedData, isLoading: isLoadingErrors } = useGetErrorsAggregatedStatsQuery(queryParams);
   const { data: standsData, isLoading: isLoadingStands } = useGetAllStandsQuery({limit: 100});
   const { data: operatorsNamesData, isLoading: isLoadingOperatorsNames } = useGetOperatorNamesQuery();
   const { data: calibrationStatsData, isLoading: isLoadingCalibrationStats } = useGetSuccessfulCalibrationQuery(queryParams);
 
-  // Добавляем функции для работы с модальным окном
   const handleOpenFilterModal = () => {
     setFilterModalOpen(true);
   };
@@ -124,19 +126,17 @@ function StatsPage() {
     setFilters(newFilters);
   };
 
-  // Определяем, есть ли активные фильтры (не текущий месяц/год)
   const hasActiveFilters = () => {
     const currentDate = new Date();
     return filters.startMonth !== currentDate.getMonth() || 
            filters.startYear !== currentDate.getFullYear() || 
            filters.endMonth !== currentDate.getMonth() || 
            filters.endYear !== currentDate.getFullYear() ||
-           !!filters.stand || // Добавлена проверка
-           !!filters.deviceType || // Добавлена проверка
-           !!filters.operator; // Добавлена проверка
+           !!filters.stand ||
+           !!filters.deviceType ||
+           !!filters.operator;
   };
-    
-    // Формируем текст для отображения текущего периода фильтрации
+
     const getFilterPeriodText = () => {
       const monthNames = [
         'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
@@ -152,7 +152,6 @@ function StatsPage() {
       return `${monthNames[startMonth]} ${startYear} - ${monthNames[endMonth]} ${endYear}`;
     };
 
-  // Состояния для хранения обработанных данных
   const [errorsByStand, setErrorsByStand] = useState([]);
   const [errorsByOperator, setErrorsByOperator] = useState([]);
   const [errorsByDeviceType, setErrorsByDeviceType] = useState([]);
@@ -169,40 +168,32 @@ function StatsPage() {
     standsInMaintenance: 0
   });
 
-  // Обработка данных при их получении
-  // Обработка данных при их получении
 useEffect(() => {
   if (errorsAggregatedData && standsData?.stands && calibrationStatsData?.successfulCalibrationsByDay) {
-    // Используем готовые данные из API вместо их обработки
     setErrorsByStand(errorsAggregatedData.errorsByStand);
     setErrorsByOperator(errorsAggregatedData.errorsByOperator);
     setErrorsByDeviceType(errorsAggregatedData.errorsByDeviceType);
     setErrorsByNumber(errorsAggregatedData.errorsByNumber);
     setTopStandsWithErrors(errorsAggregatedData.errorsByStand.slice(0, 5));
-    
-    // Обработка успешных калибровок по дням
-    const calibrationsByDay = {};
-    
-    // Получаем даты начала и конца из фильтров
-    const startDate = new Date(filters.startYear, filters.startMonth, 1);
-    const endDate = new Date(filters.endYear, filters.endMonth + 1, 0); // последний день месяца
 
-    // Инициализируем все дни нулевыми значениями для успешных калибровок
+    const calibrationsByDay = {};
+
+    const startDate = new Date(filters.startYear, filters.startMonth, 1);
+    const endDate = new Date(filters.endYear, filters.endMonth + 1, 0);
+
     const currentDateSuccess = new Date(startDate);
     while (currentDateSuccess <= endDate) {
-      const dateKey = currentDateSuccess.toISOString().split('T')[0]; // формат YYYY-MM-DD
+      const dateKey = currentDateSuccess.toISOString().split('T')[0];
       calibrationsByDay[dateKey] = 0;
       currentDateSuccess.setDate(currentDateSuccess.getDate() + 1);
     }
-      
-    // Подсчитываем успешные случаи по дням
+
     if (calibrationStatsData.successfulCalibrationsByDay && Array.isArray(calibrationStatsData.successfulCalibrationsByDay)) {
       calibrationStatsData.successfulCalibrationsByDay.forEach(item => {
         calibrationsByDay[item.date] = item.count;
       });
     }
 
-    // Преобразуем в массив для графика успешных калибровок
     const calibrationTrendData = Object.entries(calibrationsByDay).map(([date, count]) => {
       const formatDate = new Date(date);
       return {
@@ -210,29 +201,25 @@ useEffect(() => {
         fullDate: formatDate,
         successful: count
       };
-    }).sort((a, b) => a.fullDate - b.fullDate); // сортируем по дате
+    }).sort((a, b) => a.fullDate - b.fullDate);
 
     setCalibrationTrends(calibrationTrendData);
-      
-    // Обработка тренда ошибок по дням
+
     const errorsByDay = {};
     
-    // Инициализируем все дни нулевыми значениями для ошибок
     const currentDateError = new Date(startDate);
     while (currentDateError <= endDate) {
-      const dateKey = currentDateError.toISOString().split('T')[0]; // формат YYYY-MM-DD
+      const dateKey = currentDateError.toISOString().split('T')[0];
       errorsByDay[dateKey] = 0;
       currentDateError.setDate(currentDateError.getDate() + 1);
     }
-    
-    // Заполняем данные из API для ошибок
+
     if (errorsAggregatedData.errorsByDay && Array.isArray(errorsAggregatedData.errorsByDay)) {
       errorsAggregatedData.errorsByDay.forEach(item => {
         errorsByDay[item.date] = item.count;
       });
     }
-    
-    // Преобразуем в массив для графика ошибок
+
     const trendData = Object.entries(errorsByDay).map(([date, count]) => {
       const formatDate = new Date(date);
       return {
@@ -240,11 +227,10 @@ useEffect(() => {
         fullDate: formatDate,
         errors: count
       };
-    }).sort((a, b) => a.fullDate - b.fullDate); // сортируем по дате
+    }).sort((a, b) => a.fullDate - b.fullDate);
     
     setErrorTrends(trendData);
-
-    // Обработка общей статистики
+    
     const activeStands = standsData.stands.filter(stand => stand.status === 'активен').length;
     const standsInMaintenance = standsData.stands.filter(stand => 
       stand.status === 'в ремонте' || stand.status === 'требует обслуживания'

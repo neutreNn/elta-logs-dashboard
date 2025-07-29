@@ -8,6 +8,7 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import BuildIcon from '@mui/icons-material/Build';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import LogoutIcon from '@mui/icons-material/Logout';
+import SettingsApplicationsIcon from '@mui/icons-material/SettingsApplications';
 import { useHasUnviewedErrorsQuery } from '../../api/apiErrorsLogs';
 
 const iconStyle = {
@@ -78,11 +79,9 @@ const SideNavDrawer = () => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    // Удаляем токен из localStorage
     localStorage.removeItem('token');
-    // Перезагружаем страницу или перенаправляем на страницу входа
     navigate('/');
-    window.location.reload(); // Для обновления состояния авторизации
+    window.location.reload();
   };
 
   return (
@@ -96,7 +95,7 @@ const SideNavDrawer = () => {
           boxShadow: '0px 3px 10px rgba(0, 0, 0, 0.1)',
           borderRight: 'none',
           display: 'flex',
-          flexDirection: 'column', // Добавляем flex-direction для размещения кнопки внизу
+          flexDirection: 'column',
         },
       }}
       variant="permanent"
@@ -107,10 +106,10 @@ const SideNavDrawer = () => {
         <NavItem to="/logs" icon={<ArticleIcon sx={iconStyle} />} text="Логи" />
         <NavItem to="/errors" icon={<ErrorOutlineIcon sx={iconStyle} />} text="Ошибки" hasNotification={hasUnviewed} />
         <NavItem to="/stands" icon={<BuildIcon sx={iconStyle} />} text="Стенды" />
+        <NavItem to="/firmware" icon={<SettingsApplicationsIcon sx={iconStyle} />} text="Прошивки" />
         <NavItem to="/stats" icon={<BarChartIcon sx={iconStyle} />} text="Статистика" />
       </List>
       
-      {/* Кнопка выхода внизу бокового меню */}
       <ListItem disablePadding>
         <Box
             onClick={handleLogout}

@@ -48,7 +48,7 @@ const ErrorCard = ({ error, isLast }) => {
                 size="small"
                 sx={{ backgroundColor: '#fff' }}
                 onClick={(e) => {
-                    e.stopPropagation(); // Останавливаем всплытие
+                    e.stopPropagation();
                     navigate(`/logs/${error.parent_log_id}`);
                 }}
                 >
@@ -59,7 +59,7 @@ const ErrorCard = ({ error, isLast }) => {
                 size="small"
                 sx={{ backgroundColor: '#fff' }}
                 onClick={(e) => {
-                e.stopPropagation(); // Останавливаем всплытие
+                e.stopPropagation();
                 setOpenDialog(true);
                 }}
             >

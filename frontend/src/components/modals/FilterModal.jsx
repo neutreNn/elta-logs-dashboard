@@ -22,7 +22,7 @@ import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import { useGetOperatorNamesQuery } from '../../api/apiOperators';
 import { useGetStandIdsQuery } from '../../api/apiStandIds';
 
-function FilterModal({ open, handleClose, applyFilters }) {
+const FilterModal = ({ open, handleClose, applyFilters }) => {
   const { data: operatorNames = [], isLoadingOperators } = useGetOperatorNamesQuery();
   const { data: standIds = [], isLoadingIds } = useGetStandIdsQuery();
 
@@ -48,14 +48,12 @@ function FilterModal({ open, handleClose, applyFilters }) {
   };
 
   const handleApplyFilters = () => {
-    // Удаляем пустые значения из объекта фильтров
     const cleanFilters = {};
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== '') {
         cleanFilters[key] = value;
       }
     });
-
     applyFilters(cleanFilters);
     handleClose();
   };
@@ -73,7 +71,6 @@ function FilterModal({ open, handleClose, applyFilters }) {
         application_start_time_from: '',
         application_start_time_to: '',
     });
-      
     applyFilters({});
     handleClose();
   };
@@ -194,7 +191,7 @@ function FilterModal({ open, handleClose, applyFilters }) {
                   MenuProps: {
                     PaperProps: {
                       style: {
-                        maxHeight: 200, // высота в пикселях, можно изменить по вкусу
+                        maxHeight: 200,
                       },
                     },
                   },

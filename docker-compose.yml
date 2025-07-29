@@ -9,6 +9,7 @@ services:
     volumes:
       - mongo-data:/data/db
       - ./backend/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./backend/create-indexes.js:/docker-entrypoint-initdb.d/create-indexes.js:ro
     environment:
       - MONGO_INITDB_ROOT_USERNAME=admin
       - MONGO_INITDB_ROOT_PASSWORD=secure_password
@@ -26,6 +27,8 @@ services:
       - mongo
     env_file:
       - ./backend/.env
+    volumes:
+      - uploads:/app/Uploads
     restart: always
 
   frontend:
@@ -39,3 +42,4 @@ services:
 
 volumes:
   mongo-data:
+  uploads:

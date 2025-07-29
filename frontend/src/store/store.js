@@ -5,6 +5,7 @@ import apiOperators from "../api/apiOperators";
 import apiStands from "../api/apiStands";
 import apiStandIds from "../api/apiStandIds";
 import apiUser from "../api/apiUser";
+import apiFirmware from "../api/apiFirmware";
 
 const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ const store = configureStore({
     [apiStands.reducerPath]: apiStands.reducer,
     [apiStandIds.reducerPath]: apiStandIds.reducer,
     [apiUser.reducerPath]: apiUser.reducer,
+    [apiFirmware.reducerPath]: apiFirmware.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
@@ -22,7 +24,8 @@ const store = configureStore({
       .concat(apiOperators.middleware)
       .concat(apiStands.middleware)
       .concat(apiStandIds.middleware)
-      .concat(apiUser.middleware),
+      .concat(apiUser.middleware)
+      .concat(apiFirmware.middleware),
 });
 
 export default store;

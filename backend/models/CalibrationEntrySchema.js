@@ -9,6 +9,7 @@ const CalibrationEntrySchema = new mongoose.Schema(
     },
     stand_id: String,
     device_type: String,
+    device_firmware_version_parsed: [Number],
     operator_name: String,
     start_time: Date,
     reference_voltage_steps: [

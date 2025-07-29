@@ -1,4 +1,3 @@
-// App.js
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import { CssBaseline, Box } from '@mui/material';
@@ -12,25 +11,22 @@ import StandDetails from './components/StandDetails';
 import StatsPage from './pages/StatsPage';
 import { useValidateTokenMutation } from './api/apiUser';
 import CircleLoader from './components/common/CircleLoader';
-import ProtectedRoute from './components/sections/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import SideNavDrawer from './components/sections/SideNavDrawer';
+import FirmwarePage from './pages/FirmwarePage';
+import FirmwareDetailPage from './components/FirmwareDetailPage';
 
-// Компонент для сохранения текущего URL
 const AuthenticationChecker = ({ children, isAuthenticated, isLoading }) => {
   const location = useLocation();
   
-  // Пока идет проверка токена, показываем loader
   if (isLoading) {
     return <CircleLoader />;
   }
   
-  // Если не авторизован, показываем страницу логина, но сохраняем текущий URL
   if (!isAuthenticated) {
     return <LoginPage setIsAuthenticated={() => {}} redirectPath={location.pathname} />;
   }
   
-  // Если авторизован, показываем запрашиваемую страницу
   return children;
 };
 
@@ -49,7 +45,6 @@ function App() {
           return;
         }
         
-        // Проверяем валидность токена на бэкенде
         const response = await validateToken().unwrap();
         if (response && response.valid) {
           setIsAuthenticated(true);
@@ -128,6 +123,18 @@ function App() {
             <Route path="/stats" element={
               <AuthenticationChecker isAuthenticated={isAuthenticated} isLoading={loading}>
                 <StatsPage />
+              </AuthenticationChecker>
+            } />
+
+            <Route path="/firmware" element={
+              <AuthenticationChecker isAuthenticated={isAuthenticated} isLoading={loading}>
+                <FirmwarePage />
+              </AuthenticationChecker>
+            } />
+
+            <Route path="/firmware/:id" element={
+              <AuthenticationChecker isAuthenticated={isAuthenticated} isLoading={loading}>
+                <FirmwareDetailPage />
               </AuthenticationChecker>
             } />
             

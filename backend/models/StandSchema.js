@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 
-// Схема для записи о ремонте стенда
 const RepairHistorySchema = new mongoose.Schema({
   repair_date: {
     type: Date,
@@ -21,7 +20,6 @@ const RepairHistorySchema = new mongoose.Schema({
   }
 });
 
-// Основная схема стенда
 const StandSchema = new mongoose.Schema(
   {
     stand_id: {

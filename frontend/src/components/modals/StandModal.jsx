@@ -30,7 +30,7 @@ const initialFormState = {
   additional_notes: ''
 };
 
-function StandModal({ 
+const StandModal = ({ 
   open, 
   handleClose, 
   onSubmit, 
@@ -38,10 +38,9 @@ function StandModal({
   initialData = null, 
   isEditMode = false,
   errors = {}
-}) {
+}) => {
   const [formData, setFormData] = useState(initialFormState);
   
-  // При открытии диалога или изменении initialData, обновляем formData
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);

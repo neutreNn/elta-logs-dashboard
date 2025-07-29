@@ -5,17 +5,17 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: hidden; /* Отключаем основной скроллинг */
+  overflow: hidden;
   padding-right: 0 !important;
 }
 
 html {
-  overflow-y: scroll; /* Включаем прокрутку страницы */
+  overflow-y: scroll;
   height: 100%;
 }
 
 body::-webkit-scrollbar {
-  display: none; /* Скрываем скроллбар */
+  display: none;
 }
 
 code {

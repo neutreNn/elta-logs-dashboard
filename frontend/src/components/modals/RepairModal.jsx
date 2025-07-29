@@ -13,7 +13,7 @@ import {
   Box
 } from '@mui/material';
 
-function RepairModal({ open, handleClose, handleSubmit }) {
+const RepairModal = ({ open, handleClose, handleSubmit }) => {
 
   const [repairForm, setRepairForm] = useState({
     repair_description: '',

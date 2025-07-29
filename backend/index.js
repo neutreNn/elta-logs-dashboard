@@ -2,16 +2,18 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import multer from 'multer';
 
 import { LogsController } from './controllers/LogsController.js';
 import { LogsErrorsController } from './controllers/LogsErrorsController.js';
 import { OperatorsController } from './controllers/OperatorsController.js';
 import { StandsController } from './controllers/StandsController.js';
 import { StandIdsController } from './controllers/StandIdController.js';
+import { UserController } from './controllers/UserController.js';
+import { FirmwareController } from './controllers/FirmwareController.js';
+import handleValidationErrors from './utils/handleValidationErrors.js';
 import checkAuth from './utils/checkAuth.js';
 import { loginValidation, registerValidation } from './validation.js';
-import handleValidationErrors from './utils/handleValidationErrors.js';
-import { UserController } from './controllers/UserController.js';
 
 dotenv.config();
 
@@ -24,6 +26,8 @@ mongoose.connect(process.env.MONGO_URL)
 });
 
 const app = express();
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 app.use(express.json({ limit: '50mb' }));
 app.use(cors());
@@ -62,6 +66,14 @@ app.post('/stands', checkAuth, StandsController.createStand);
 app.put('/stands/:id', checkAuth, StandsController.updateStand);
 app.post('/stands/:id/repair', checkAuth, StandsController.addRepairRecord);
 app.delete('/stands/:id', checkAuth, StandsController.removeStand);
+
+// Маршруты для прошивок
+app.get('/firmware/check', FirmwareController.checkForUpdates);
+app.get('/firmware', checkAuth, FirmwareController.getAllFirmwares);
+app.get('/firmware/:id', checkAuth, FirmwareController.getFirmwareById);
+app.get('/firmware/download/:id', FirmwareController.downloadFirmware);
+app.post('/firmware', checkAuth, upload.single('file'), FirmwareController.uploadFirmware);
+app.delete('/firmware/:id', checkAuth, FirmwareController.deleteFirmware);
 
 app.listen(4444, (err) => {
     if (err) {
