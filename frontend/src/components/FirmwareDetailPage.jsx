@@ -14,12 +14,15 @@ import {
   DialogActions,
   DialogContent,
   DialogContentText,
-  DialogTitle
+  DialogTitle,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   useGetFirmwareByIdQuery,
-  useDeleteFirmwareMutation
+  useDeleteFirmwareMutation,
+  useDownloadFirmwareMutation
 } from '../api/apiFirmware';
 import CircleLoader from '../components/common/CircleLoader';
 import ErrorMessage from '../components/common/ErrorMessage';
@@ -70,9 +73,12 @@ function FirmwareDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
   
   const { data: firmware, isLoading, isError } = useGetFirmwareByIdQuery(id);
   const [deleteFirmware] = useDeleteFirmwareMutation();
+  const [downloadFirmware] = useDownloadFirmwareMutation();
 
   const handleGoBack = () => {
     navigate(-1);
@@ -93,8 +99,26 @@ function FirmwareDetailPage() {
       navigate('/firmware');
     } catch (error) {
       console.error('Ошибка при удалении прошивки:', error);
+      setErrorMessage(error.data?.message || 'Не удалось удалить прошивку');
+      setSnackbarOpen(true);
       handleCloseDeleteDialog();
     }
+  };
+
+  const handleDownloadFirmware = async () => {
+    try {
+      const fileName = firmware.file_path.split('/').pop();
+      await downloadFirmware({ id, fileName }).unwrap();
+    } catch (error) {
+      console.error('Ошибка при скачивании прошивки:', error);
+      setErrorMessage(error.data?.message || 'Не удалось скачать прошивку');
+      setSnackbarOpen(true);
+    }
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
+    setErrorMessage('');
   };
 
   if (isLoading) return <CircleLoader />;
@@ -163,10 +187,7 @@ function FirmwareDetailPage() {
               variant="contained" 
               color="primary"
               startIcon={<DownloadIcon />}
-              component="a"
-              href={`http://172.68.35.171:5000/firmware/download/${firmware._id}`}
-              target="_blank"
-              download
+              onClick={handleDownloadFirmware}
             >
               Скачать
             </Button>
@@ -258,6 +279,16 @@ function FirmwareDetailPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+      >
+        <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
+          {errorMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

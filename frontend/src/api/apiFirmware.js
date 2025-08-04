@@ -1,10 +1,9 @@
-// api/apiFirmware.js
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 const apiFirmware = createApi({
   reducerPath: "apiFirmware",
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://172.68.35.171:5000",
+    baseUrl: process.env.REACT_APP_API_BASE_URL,
     prepareHeaders: (headers) => {
       const token = localStorage.getItem("token");
       if (token) {
@@ -41,6 +40,24 @@ const apiFirmware = createApi({
       }),
       invalidatesTags: ["Firmwares"],
     }),
+    downloadFirmware: builder.mutation({
+      query: ({ id, fileName }) => ({
+        url: `/firmware/download/${id}`,
+        method: "GET",
+        responseHandler: async (response) => {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = fileName || "firmware";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+          return { data: null };
+        },
+      }),
+    }),
     checkForUpdates: builder.query({
       query: (params) => ({
         url: "/firmware/check",
@@ -55,6 +72,7 @@ export const {
   useGetFirmwareByIdQuery,
   useUploadFirmwareMutation,
   useDeleteFirmwareMutation,
+  useDownloadFirmwareMutation,
   useCheckForUpdatesQuery,
 } = apiFirmware;
 

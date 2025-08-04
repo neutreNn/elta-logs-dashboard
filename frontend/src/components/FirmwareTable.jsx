@@ -22,7 +22,7 @@ import {
 import DownloadIcon from '@mui/icons-material/Download';
 import InfoIcon from '@mui/icons-material/Info';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useDeleteFirmwareMutation } from '../api/apiFirmware';
+import { useDeleteFirmwareMutation, useDownloadFirmwareMutation } from '../api/apiFirmware';
 import formatDate from '../utils/formatDate';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -71,6 +71,7 @@ const FirmwareTypeChip = ({ type, subType }) => {
 
 function FirmwareTable({ firmwares }) {
   const [deleteFirmware, { isLoading: isDeleting }] = useDeleteFirmwareMutation();
+  const [downloadFirmware] = useDownloadFirmwareMutation();
   const navigate = useNavigate();
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -99,6 +100,17 @@ function FirmwareTable({ firmwares }) {
       setErrorMessage(error.data?.message || 'Не удалось удалить прошивку');
       setSnackbarOpen(true);
       handleCloseDeleteDialog();
+    }
+  };
+
+  const handleDownloadFirmware = async (firmware) => {
+    try {
+      const fileName = firmware.file_path.split('/').pop();
+      await downloadFirmware({ id: firmware._id, fileName }).unwrap();
+    } catch (error) {
+      console.error('Ошибка при скачивании прошивки:', error);
+      setErrorMessage(error.data?.message || 'Не удалось скачать прошивку');
+      setSnackbarOpen(true);
     }
   };
 
@@ -138,10 +150,7 @@ function FirmwareTable({ firmwares }) {
                     <Tooltip title="Скачать">
                       <IconButton 
                         size="small" 
-                        component="a" 
-                        href={`http://172.68.35.171:5000/firmware/download/${firmware._id}`}
-                        target="_blank"
-                        download
+                        onClick={() => handleDownloadFirmware(firmware)}
                       >
                         <DownloadIcon fontSize="small" />
                       </IconButton>

@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 const apiErrorsLogs = createApi({
   reducerPath: "apiErrorsLogs",
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://172.68.35.171:5000",
+    baseUrl: process.env.REACT_APP_API_BASE_URL,
     prepareHeaders: (headers) => {
       const token = localStorage.getItem("token");
       if (token) {
@@ -36,19 +36,19 @@ const apiErrorsLogs = createApi({
     }),
     markAllErrorsAsViewed: builder.mutation({
       query: () => ({
-        url: '/logs-errors/mark-viewed',
-        method: 'PUT',
+        url: "/logs-errors/mark-viewed",
+        method: "PUT",
       }),
       invalidatesTags: ["LogsError"],
     }),
   }),
 });
 
-export const { 
+export const {
   useGetAllLogsErrorsQuery,
   useHasUnviewedErrorsQuery,
   useMarkAllErrorsAsViewedMutation,
-  useGetErrorsAggregatedStatsQuery
+  useGetErrorsAggregatedStatsQuery,
 } = apiErrorsLogs;
 
 export default apiErrorsLogs;
