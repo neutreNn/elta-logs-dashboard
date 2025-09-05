@@ -14,6 +14,7 @@ import { FirmwareController } from './controllers/FirmwareController.js';
 import handleValidationErrors from './utils/handleValidationErrors.js';
 import checkAuth from './utils/checkAuth.js';
 import { loginValidation, registerValidation } from './validation.js';
+import { MobileController } from './controllers/MobileController.js';
 
 dotenv.config();
 
@@ -74,6 +75,16 @@ app.get('/firmware/:id', checkAuth, FirmwareController.getFirmwareById);
 app.get('/firmware/download/:id', FirmwareController.downloadFirmware);
 app.post('/firmware', checkAuth, upload.single('file'), FirmwareController.uploadFirmware);
 app.delete('/firmware/:id', checkAuth, FirmwareController.deleteFirmware);
+
+// Мобильные файлы
+app.get('/mobile', checkAuth, MobileController.getAllMobiles);
+app.get('/mobile/:id', checkAuth, MobileController.getMobileById);
+app.get('/mobile/download/:id', MobileController.downloadMobile);
+app.patch('/mobile/:id', checkAuth, MobileController.updateMobile);
+app.post('/mobile', checkAuth, upload.single('file'), MobileController.uploadMobile);
+app.post('/mobile/:id/file', checkAuth, upload.single('file'), MobileController.addMobileFile);
+app.delete('/mobile/:id', checkAuth, MobileController.deleteMobile);
+app.delete('/mobile/files/:id', checkAuth, MobileController.deleteMobileFile);
 
 app.listen(4444, (err) => {
     if (err) {

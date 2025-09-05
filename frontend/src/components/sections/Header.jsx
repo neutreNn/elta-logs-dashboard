@@ -5,19 +5,28 @@ import { useLocation } from 'react-router-dom';
 function Header() {
   const location = useLocation();
 
-  const logDetailMatch = location.pathname.match(/^\/logs\/[a-f0-9]{24}$/i);
-
   const titles = {
-    '/': 'Главная',
+    '/home': 'Главная',
     '/logs': 'Логи',
     '/analytics': 'Аналитика',
     '/errors': 'Ошибки',
     '/stands': 'Стенды',
     '/firmware': 'Прошивки',
+    '/mobile': 'Приложения',
     '/stats': 'Статистика',
   };
 
-  const title = logDetailMatch ? 'Просмотр лога' : titles[location.pathname] || 'Система управления';
+  const dynamicRoutes = [
+    { regex: /^\/logs\/[a-f0-9]{24}$/i, title: 'Просмотр лога' },
+    { regex: /^\/firmware\/[a-f0-9]{24}$/i, title: 'Просмотр прошивок' },
+    { regex: /^\/mobile\/[a-f0-9]{24}$/i, title: 'Просмотр приложения' },
+  ];
+
+  const dynamicMatch = dynamicRoutes.find(route => route.regex.test(location.pathname));
+
+  const title = dynamicMatch
+    ? dynamicMatch.title
+    : titles[location.pathname];
 
   return (
     <AppBar position="sticky" sx={{ borderRadius: 1, marginBottom: 2, overflow: 'hidden' }}>

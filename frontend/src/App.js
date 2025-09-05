@@ -15,6 +15,8 @@ import LoginPage from './pages/LoginPage';
 import SideNavDrawer from './components/sections/SideNavDrawer';
 import FirmwarePage from './pages/FirmwarePage';
 import FirmwareDetailPage from './components/FirmwareDetailPage';
+import MobilePage from './pages/MobilePage';
+import MobileDetailPage from './components/MobileDetailPage';
 
 const AuthenticationChecker = ({ children, isAuthenticated, isLoading }) => {
   const location = useLocation();
@@ -135,6 +137,18 @@ function App() {
             <Route path="/firmware/:id" element={
               <AuthenticationChecker isAuthenticated={isAuthenticated} isLoading={loading}>
                 <FirmwareDetailPage />
+              </AuthenticationChecker>
+            } />
+
+            <Route path="/mobile" element={
+              <AuthenticationChecker isAuthenticated={isAuthenticated} isLoading={loading}>
+                <MobilePage />
+              </AuthenticationChecker>
+            } />
+
+            <Route path="/mobile/:id" element={
+              <AuthenticationChecker isAuthenticated={isAuthenticated} isLoading={loading}>
+                <MobileDetailPage />
               </AuthenticationChecker>
             } />
             
