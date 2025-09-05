@@ -34,14 +34,7 @@ import BusinessIcon from '@mui/icons-material/Business';
 import DevicesIcon from '@mui/icons-material/Devices';
 import ComputerIcon from '@mui/icons-material/Computer';
 import CodeIcon from '@mui/icons-material/Code';
-
-const formatFileSize = (bytes) => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
+import formatFileSize from '../utils/formatFileSize';
 
 const getTypeIcon = (type) => {
   switch (type) {

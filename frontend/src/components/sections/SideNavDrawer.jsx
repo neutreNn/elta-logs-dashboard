@@ -8,6 +8,7 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import BuildIcon from '@mui/icons-material/Build';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import LogoutIcon from '@mui/icons-material/Logout';
+import PhonelinkSetupIcon from '@mui/icons-material/PhonelinkSetup';
 import SettingsApplicationsIcon from '@mui/icons-material/SettingsApplications';
 import { useHasUnviewedErrorsQuery } from '../../api/apiErrorsLogs';
 
@@ -107,6 +108,7 @@ const SideNavDrawer = () => {
         <NavItem to="/errors" icon={<ErrorOutlineIcon sx={iconStyle} />} text="Ошибки" hasNotification={hasUnviewed} />
         <NavItem to="/stands" icon={<BuildIcon sx={iconStyle} />} text="Стенды" />
         <NavItem to="/firmware" icon={<SettingsApplicationsIcon sx={iconStyle} />} text="Прошивки" />
+        <NavItem to="/mobile" icon={<PhonelinkSetupIcon sx={iconStyle} />} text="Приложения" />
         <NavItem to="/stats" icon={<BarChartIcon sx={iconStyle} />} text="Статистика" />
       </List>
       

@@ -25,14 +25,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useDeleteFirmwareMutation, useDownloadFirmwareMutation } from '../api/apiFirmware';
 import formatDate from '../utils/formatDate';
 import { Link, useNavigate } from 'react-router-dom';
-
-const formatFileSize = (bytes) => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
+import formatFileSize from '../utils/formatFileSize';
 
 const subTypeLabels = {
   'test-strips': 'Тест-полоски',
